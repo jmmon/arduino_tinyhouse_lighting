@@ -1,0 +1,7 @@
+{
+    "board": "arduino:avr:nano",
+    "configuration": "cpu=atmega328old",
+    "sketch": "Light_4.1.1_two_button.ino",
+    "port": "COM9",
+    "programmer": "ArduinoISP"
+}

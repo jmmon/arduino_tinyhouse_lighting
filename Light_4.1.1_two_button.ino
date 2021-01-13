@@ -97,6 +97,37 @@
     (register an additional buttonpress with "On Press" so postpone action until decision is finalized)
 */
 
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+/*
+Notes: current system:
+(Loops every 20 ms to register signal of button 0, 1, or no signal)
+Button is pressed, timer starts for that button
+  While button is pressed {
+    (check for release)
+    if held, check if held long enough to start fading the light
+    if release {
+      reset start timer, initiate new timer for release
+      if was fading, stop fading
+    Once new timer is up {
+      reset timer (stop counting multipresses)
+      if not fading (indicates a button tap), turn on light and/or go brighter one level
+      
+could instead use 1 timer, starts at button press
+start fading after x ms
+if released, mark time between start and release
+if that time is within y, indicates a button tap
+    add 1 button press
+~at this time, wait for multipresses (more presses)
+after pressedTime + z ms, stop counting multipresses and commence action 
+    on, brighter, pause color
+
+button cycle now complete
+
+
+
+*/
 #include <avr/pgmspace.h>
 #include <DmxSimple.h>
 const String VERSION = "Light_4.0.0: Structs and Light ID\n - SERIAL Enabled; DMX Disabled";
