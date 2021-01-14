@@ -219,6 +219,9 @@ const float COLOR_PROGRESS_FADE_AMOUNT = 0.001; //modified if faded so interval 
 const uint8_t NUM_OF_MODES_CYCLE = 3;
 const uint8_t LIGHTSECTION_COUNT = 4;
 
+const uint16_t COLOR_PROGRESS_SMOOTH_DELAY_INIT = 20; //ms
+const uint16_t COLOR_PROGRESS_SUDDEN_DELAY_INIT = 3000; //ms
+
 //********************************************************************************************************************************************************
 
 //                                              Structs
@@ -269,6 +272,9 @@ struct section_t
     uint8_t colorState;        //next color state in the cycle
     bool colorProgress;        //while true, colors for this section will cycle
 
+    uint32_t colorProgressTimerStart;
+    uint16_t colorProgressInterval;
+
     float nextRGB[3]; //next state of RGB for colorProgress cycle. Stores index of lookup table. Could be modified by colorFadeLevel to change the max level for the colorProgress.
     float colorCycleFadeLevel;
     int8_t colorCycleFadeDir;
@@ -277,13 +283,13 @@ struct section_t
     button_t *_button[2];
 
 } section[] = {
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 0.8, 4, 0, 0, false, {0, 0, 0}, 1, 1, ENTRY_BUTTON_PIN, {&button[0], &button[1]}}, //  ID 0    Living Room Lights
+    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 0.8, 4, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, ENTRY_BUTTON_PIN, {&button[0], &button[1]}}, //  ID 0    Living Room Lights
 
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 1, 3, 0, 0, false, {0, 0, 0}, 1, 1, KITCHEN_BUTTON_PIN, {&button[4], &button[5]}}, //  ID 1    Kitchen Lights
+    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 1, 3, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, KITCHEN_BUTTON_PIN, {&button[4], &button[5]}}, //  ID 1    Kitchen Lights
 
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 0.9, 2, 0, 0, false, {0, 0, 0}, 1, 1, ENTRY2_BUTTON_PIN, {&button[2], &button[3]}}, //  ID 2   Porch Lights
+    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 0.9, 2, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, ENTRY2_BUTTON_PIN, {&button[2], &button[3]}}, //  ID 2   Porch Lights
 
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 1.0, 1, 0, 0, false, {0, 0, 0}, 1, 1, BATH_BUTTON_PIN, {&button[6], &button[7]}}, //  ID 3   bath
+    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 1.0, 1, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, BATH_BUTTON_PIN, {&button[6], &button[7]}}, //  ID 3   bath
     //  ID 3    Overhead Bedroom
     //  ID 4    Overhead Main
     //  ID 5    Overhead Small Loft
@@ -468,7 +474,21 @@ void loop() //******************************************************************
 {
     uint32_t currentTime = millis();
 
-    
+    //colorProgress loop
+    //for each section,
+        //if colorProgress
+            //loop every n ms
+                //progressColor
+
+    for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) {
+        if (section[i].colorProgress == true) {
+            if ((currentTime - section[i].colorProgressTimerStart) >= section[i].colorProgressInterval) {
+                section[i].colorProgressTimerStart += section[i].colorProgressInterval;
+                progressColor(i);
+
+            }
+        }
+    }
 
 
 
@@ -481,9 +501,9 @@ void loop() //******************************************************************
 
         for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) // cycle through each section
         {
-            if (section[i].colorProgress == true) {
-                progressColor(i);
-            }
+            // if (section[i].colorProgress == true) {
+            //     progressColor(i);
+            // }
             
 
             uint16_t buttonStatus = analogRead(section[i].PIN); // read the button pin to check if any buttons are pressed
@@ -652,7 +672,8 @@ void loop() //******************************************************************
                                                     section[i].colorState = random(12); //get a random state to start at
                                                     for (uint8_t k = 0; k < 4; k++)
                                                             section[i].RGBW[k] = 0;
-                                                    section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
+                                                    section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;  section[i].colorProgressTimerStart = currentTime;
+                                                    section[i].colorProgressInterval = COLOR_PROGRESS_SMOOTH_DELAY_INIT;
                                                     progressColor(i);
                                                 }
 
@@ -667,6 +688,8 @@ void loop() //******************************************************************
                                                     for (uint8_t k = 0; k < 4; k++)
                                                             section[i].RGBW[k] = 0;
                                                     section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
+                                                    section[i].colorProgressTimerStart = currentTime;
+                                                    section[i].colorProgressInterval = COLOR_PROGRESS_SUDDEN_DELAY_INIT;
                                                     progressColor(i);
                                                 }
                                                 break;
@@ -713,6 +736,8 @@ void loop() //******************************************************************
                                                     for (uint8_t k = 0; k < 4; k++)
                                                         section[i].RGBW[k] = 0;
                                                     section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
+                                                      section[i].colorProgressTimerStart = currentTime;
+                                                    section[i].colorProgressInterval = COLOR_PROGRESS_SMOOTH_DELAY_INIT;
                                                     progressColor(i);
 
                                                     break;
@@ -724,6 +749,8 @@ void loop() //******************************************************************
                                                     for (uint8_t k = 0; k < 4; k++)
                                                         section[i].RGBW[k] = 0;
                                                     section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
+                                                    section[i].colorProgressTimerStart = currentTime;
+                                                    section[i].colorProgressInterval = COLOR_PROGRESS_SUDDEN_DELAY_INIT;
                                                     progressColor(i);
 
                                                     break;
