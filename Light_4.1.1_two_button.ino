@@ -213,7 +213,7 @@ const float RED_LIST[] = {1., _HIGH, MIDDLE, _LOW, 0, 0, 0, 0, 0, _LOW, MIDDLE, 
 const float GREEN_LIST[] = {0, _LOW, MIDDLE, _HIGH, 1., _HIGH, MIDDLE, _LOW, 0, 0, 0, 0};
 const float BLUE_LIST[] = {0, 0, 0, 0, 0, _LOW, MIDDLE, _HIGH, 1., _HIGH, MIDDLE, _LOW};
 const uint8_t COLOR_PROGRESS_DELAY_COUNT = 0;   // n delay cycles per progress cycle
-const uint8_t COLOR_PROGRESS_DELAY_SUDDEN = 100;
+const uint8_t COLOR_PROGRESS_DELAY_SUDDEN = 0;
 const float COLOR_PROGRESS_FADE_AMOUNT = 0.001; //modified if faded so interval is the same if faded. fade not yet implemented.
 
 const uint8_t NUM_OF_MODES_CYCLE = 3;
@@ -383,11 +383,32 @@ void progressColor(uint8_t i)
 {
     if (section[i].mode == 2) {
         //sudden color changes
-        section[i].colorDelayCounter++;
-        if (section[i].colorDelayCounter >= COLOR_PROGRESS_DELAY_SUDDEN) // progress color if necessary
-        {
-            section[i].colorDelayCounter = 0;
 
+        section[i].colorState += 1;
+        if (section[i].colorState == 12)
+            section[i].colorState = 0;
+        if (DEBUG == true)
+        {
+            Serial.print(F("color progress state: "));
+            Serial.println(section[i].colorState);
+        }
+
+        //set new light color
+        section[i].RGBW[0] = RED_LIST[section[i].colorState];
+        section[i].RGBW[1] = GREEN_LIST[section[i].colorState];
+        section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
+
+    } else if (section[i].mode == 1) {
+        //smooth color changes
+
+
+
+        section[i].nextRGB[0] = RED_LIST[section[i].colorState]; // target levels for the current state
+        section[i].nextRGB[1] = GREEN_LIST[section[i].colorState];
+        section[i].nextRGB[2] = BLUE_LIST[section[i].colorState];
+
+        if ((section[i].nextRGB[0] == section[i].RGBW[0]) && (section[i].nextRGB[1] == section[i].RGBW[1]) && (section[i].nextRGB[2] == section[i].RGBW[2])) // Go to next state
+        {
             section[i].colorState += 1;
             if (section[i].colorState == 12)
                 section[i].colorState = 0;
@@ -396,54 +417,26 @@ void progressColor(uint8_t i)
                 Serial.print(F("color progress state: "));
                 Serial.println(section[i].colorState);
             }
-
-            //set new light color
-            section[i].RGBW[0] = RED_LIST[section[i].colorState];
-            section[i].RGBW[1] = GREEN_LIST[section[i].colorState];
-            section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
-
         }
-    } else if (section[i].mode == 1) {
-        //smooth color changes
-        section[i].colorDelayCounter++;
-        if (section[i].colorDelayCounter >= COLOR_PROGRESS_DELAY_COUNT) // progress color if necessary
+        else // else change colors to get closer to current state
         {
-            section[i].colorDelayCounter = 0;
-            section[i].nextRGB[0] = RED_LIST[section[i].colorState]; // target levels for the current state
-            section[i].nextRGB[1] = GREEN_LIST[section[i].colorState];
-            section[i].nextRGB[2] = BLUE_LIST[section[i].colorState];
-
-            if ((section[i].nextRGB[0] == section[i].RGBW[0]) && (section[i].nextRGB[1] == section[i].RGBW[1]) && (section[i].nextRGB[2] == section[i].RGBW[2])) // Go to next state
+            for (uint8_t k = 0; k < 3; k++) //rgb
             {
-                section[i].colorState += 1;
-                if (section[i].colorState == 12)
-                    section[i].colorState = 0;
-                if (DEBUG == true)
+                if (section[i].RGBW[k] < section[i].nextRGB[k])
                 {
-                    Serial.print(F("color progress state: "));
-                    Serial.println(section[i].colorState);
+                    section[i].RGBW[k] += COLOR_PROGRESS_FADE_AMOUNT;
+                    if (section[i].RGBW[k] >= section[i].nextRGB[k])
+                        section[i].RGBW[k] = section[i].nextRGB[k];
+                }
+                else if (section[i].RGBW[k] > section[i].nextRGB[k])
+                {
+                    section[i].RGBW[k] -= COLOR_PROGRESS_FADE_AMOUNT;
+                    if (section[i].RGBW[k] <= section[i].nextRGB[k])
+                        section[i].RGBW[k] = section[i].nextRGB[k];
                 }
             }
-            else // else change colors to get closer to current state
-            {
-                for (uint8_t k = 0; k < 3; k++) //rgb
-                {
-                    if (section[i].RGBW[k] < section[i].nextRGB[k])
-                    {
-                        section[i].RGBW[k] += COLOR_PROGRESS_FADE_AMOUNT;
-                        if (section[i].RGBW[k] >= section[i].nextRGB[k])
-                            section[i].RGBW[k] = section[i].nextRGB[k];
-                    }
-                    else if (section[i].RGBW[k] > section[i].nextRGB[k])
-                    {
-                        section[i].RGBW[k] -= COLOR_PROGRESS_FADE_AMOUNT;
-                        if (section[i].RGBW[k] <= section[i].nextRGB[k])
-                            section[i].RGBW[k] = section[i].nextRGB[k];
-                    }
-                }
-            }
-            
         }
+
     }
     updateLights(i);
 }
@@ -670,11 +663,20 @@ void loop() //******************************************************************
                                                 { //lastMode was not 2
                                                     section[i].colorProgress = true;
                                                     section[i].colorState = random(12); //get a random state to start at
-                                                    for (uint8_t k = 0; k < 4; k++)
-                                                            section[i].RGBW[k] = 0;
-                                                    section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;  section[i].colorProgressTimerStart = currentTime;
+
+                                                    section[i].RGBW[3] = 0;
+                                                    // for (uint8_t k = 0; k < 4; k++)
+                                                    //         section[i].RGBW[k] = 0;
+                                                        //initialize a state
+                                                    section[i].RGBW[0] = RED_LIST[section[i].colorState];
+                                                    section[i].RGBW[1] = GREEN_LIST[section[i].colorState];
+                                                    section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
+                                                    updateLights(i);
+
+                                                    section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
+                                                    section[i].colorProgressTimerStart = currentTime;
                                                     section[i].colorProgressInterval = COLOR_PROGRESS_SMOOTH_DELAY_INIT;
-                                                    progressColor(i);
+                                                    //progressColor(i);
                                                 }
 
                                                 break;
@@ -685,13 +687,21 @@ void loop() //******************************************************************
                                                 {
                                                     section[i].colorProgress = true;
                                                     section[i].colorState = random(12); // get a random state to start at
-                                                    for (uint8_t k = 0; k < 4; k++)
-                                                            section[i].RGBW[k] = 0;
+
+                                                    section[i].RGBW[3] = 0;
+                                                    // for (uint8_t k = 0; k < 4; k++)
+                                                    //         section[i].RGBW[k] = 0;
+                                                        //initialize a state
+                                                    section[i].RGBW[0] = RED_LIST[section[i].colorState];
+                                                    section[i].RGBW[1] = GREEN_LIST[section[i].colorState];
+                                                    section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
+                                                    updateLights(i);
+                                                    
                                                     section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
-                                                    section[i].colorProgressTimerStart = currentTime;
-                                                    section[i].colorProgressInterval = COLOR_PROGRESS_SUDDEN_DELAY_INIT;
-                                                    progressColor(i);
+                                                    //progressColor(i);
                                                 }
+                                                section[i].colorProgressTimerStart = currentTime;
+                                                section[i].colorProgressInterval = COLOR_PROGRESS_SUDDEN_DELAY_INIT;
                                                 break;
                                             }
                                             
@@ -730,28 +740,44 @@ void loop() //******************************************************************
                                                     section[i].masterBrightness = DEFAULT_BRIGHTNESS;
                                                     break;
                                                 case (1): // RGB smooth from RGB sudden
-                                                    // TODO
+                                                    
                                                     section[i].colorProgress = true;
                                                     section[i].colorState = random(12); // get a random state to start at
-                                                    for (uint8_t k = 0; k < 4; k++)
-                                                        section[i].RGBW[k] = 0;
+
+                                                    section[i].RGBW[3] = 0;
+                                                    // for (uint8_t k = 0; k < 4; k++)
+                                                    //         section[i].RGBW[k] = 0;
+                                                        //initialize a state
+                                                    section[i].RGBW[0] = RED_LIST[section[i].colorState];
+                                                    section[i].RGBW[1] = GREEN_LIST[section[i].colorState];
+                                                    section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
+                                                    updateLights(i);
+
                                                     section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
-                                                      section[i].colorProgressTimerStart = currentTime;
+                                                    section[i].colorProgressTimerStart = currentTime;
                                                     section[i].colorProgressInterval = COLOR_PROGRESS_SMOOTH_DELAY_INIT;
-                                                    progressColor(i);
+                                                    //progressColor(i);
 
                                                     break;
                                                 case (2): // RGB sudden from W
-                                                    // start colorProgress, add white
+                                                    // start colorProgress
 
                                                     section[i].colorProgress = true;
                                                     section[i].colorState = random(12); // get a random state to start at
-                                                    for (uint8_t k = 0; k < 4; k++)
-                                                        section[i].RGBW[k] = 0;
+
+                                                    section[i].RGBW[3] = 0;
+                                                    // for (uint8_t k = 0; k < 4; k++)
+                                                    //         section[i].RGBW[k] = 0;
+                                                        //initialize a state
+                                                    section[i].RGBW[0] = RED_LIST[section[i].colorState];
+                                                    section[i].RGBW[1] = GREEN_LIST[section[i].colorState];
+                                                    section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
+                                                    updateLights(i);
+                                                    
                                                     section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
                                                     section[i].colorProgressTimerStart = currentTime;
                                                     section[i].colorProgressInterval = COLOR_PROGRESS_SUDDEN_DELAY_INIT;
-                                                    progressColor(i);
+                                                    //progressColor(i);
 
                                                     break;
                                                 }
