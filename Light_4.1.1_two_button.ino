@@ -200,6 +200,7 @@ const uint16_t BUTTON_FADE_DELAY_RAPID = 410;       //after this time, accellera
 //brightness value = index of large lookup table above
 const float DEFAULT_BRIGHTNESS = 0.40; // 0-1 (percent) value for default brightness when turned on
 const float FADE_FACTOR = 0.0050;      //base fade adjustment; modified by section[].BRIGHTNESS_FACTOR
+const float FADE_FACTOR_RAPID = 0.01;    //after BUTTON_FADE_DELAY_RAPID ms, this is applied instead
 
 const uint8_t LOOP_DELAY_INTERVAL = 20; // refresh speed in ms          {for ms=1: factor=0.00001; amount=0.018}
 uint32_t loopStartTime = 0;             // loop start time
@@ -221,6 +222,9 @@ const uint8_t LIGHTSECTION_COUNT = 4;
 
 const uint16_t COLOR_PROGRESS_SMOOTH_DELAY_INIT = 20; //ms
 const uint16_t COLOR_PROGRESS_SUDDEN_DELAY_INIT = 3000; //ms
+
+uint16_t colorProgressDelayCounter = 0;
+const uint8_t COLOR_PROGRESS_DELAY_COUNTER_INIT = 5;    // 5 * 20ms (main loop time) per adjustment
 
 //********************************************************************************************************************************************************
 
@@ -262,7 +266,7 @@ struct section_t
     float lastRGBW[4]; //last color levels
     float masterBrightness;
     int8_t mode; // 0-4: WW, colors, colors+ww, (All, Nightlight)
-    uint8_t lastMode;
+    uint8_t lastMode;                                                                               // not used
     //typical cycle is 0-1-2-0... modes 3 and 4 are hidden from the typical cycle.
     bool isOn;               // Are any levels > 0?
     float BRIGHTNESS_FACTOR; // affects [default brightness + fade speed], pref range [0-1]
@@ -272,8 +276,8 @@ struct section_t
     uint8_t colorState;        //next color state in the cycle
     bool colorProgress;        //while true, colors for this section will cycle
 
-    uint32_t colorProgressTimerStart;
-    uint16_t colorProgressInterval;
+    uint32_t colorProgressTimerStart;   //starting time of colorProgress
+    uint16_t colorProgressInterval;     // adjust this to change colorProgress speed
 
     float nextRGB[3]; //next state of RGB for colorProgress cycle. Stores index of lookup table. Could be modified by colorFadeLevel to change the max level for the colorProgress.
     float colorCycleFadeLevel;
@@ -283,17 +287,22 @@ struct section_t
     button_t *_button[2];
 
 } section[] = {
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 0.8, 4, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, ENTRY_BUTTON_PIN, {&button[0], &button[1]}}, //  ID 0    Living Room Lights
+    //  ID 0    Living Room Lights
+    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 0.8, 4, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, ENTRY_BUTTON_PIN, {&button[0], &button[1]}},
 
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 1, 3, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, KITCHEN_BUTTON_PIN, {&button[4], &button[5]}}, //  ID 1    Kitchen Lights
+    //  ID 1    Kitchen Lights
+    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 1, 3, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, KITCHEN_BUTTON_PIN, {&button[4], &button[5]}},
 
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 0.9, 2, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, ENTRY2_BUTTON_PIN, {&button[2], &button[3]}}, //  ID 2   Porch Lights
+    //  ID 2   Porch Lights
+    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 0.9, 2, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, ENTRY2_BUTTON_PIN, {&button[2], &button[3]}},
 
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 1.0, 1, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, BATH_BUTTON_PIN, {&button[6], &button[7]}}, //  ID 3   bath
-    //  ID 3    Overhead Bedroom
-    //  ID 4    Overhead Main
-    //  ID 5    Overhead Small Loft
-    //  ID 7    Greenhouse Lights
+    //  ID 3   bath
+    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 1.0, 1, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, BATH_BUTTON_PIN, {&button[6], &button[7]}},
+
+    //  ID     Overhead Bedroom
+    //  ID     Overhead Main
+    //  ID     Overhead Small Loft
+    //  ID     Greenhouse Lights
 };
 
 //******************************************************************************************************************************************************** 
@@ -363,18 +372,18 @@ void updateLights(uint8_t i)
     }
 }
 
-void masterFadeIncrement(uint8_t i)
+void masterFadeIncrement(uint8_t i, float f)
 {
-    if (section[i].masterBrightness < (1 - section[i].BRIGHTNESS_FACTOR * FADE_FACTOR))
-        section[i].masterBrightness += section[i].BRIGHTNESS_FACTOR * FADE_FACTOR;
+    if (section[i].masterBrightness < (1 - section[i].BRIGHTNESS_FACTOR * f))
+        section[i].masterBrightness += section[i].BRIGHTNESS_FACTOR * f;
     else
         section[i].masterBrightness = 1; // max
 }
 
-void masterFadeDecrement(uint8_t i)
+void masterFadeDecrement(uint8_t i, float f)
 {
-    if (section[i].masterBrightness > (section[i].BRIGHTNESS_FACTOR * FADE_FACTOR))
-        section[i].masterBrightness -= section[i].BRIGHTNESS_FACTOR * FADE_FACTOR;
+    if (section[i].masterBrightness > (section[i].BRIGHTNESS_FACTOR * f))
+        section[i].masterBrightness -= section[i].BRIGHTNESS_FACTOR * f;
     else
         section[i].masterBrightness = 0; // min
 }
@@ -773,7 +782,7 @@ void loop() //******************************************************************
                                                     section[i].RGBW[1] = GREEN_LIST[section[i].colorState];
                                                     section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
                                                     updateLights(i);
-                                                    
+
                                                     section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
                                                     section[i].colorProgressTimerStart = currentTime;
                                                     section[i].colorProgressInterval = COLOR_PROGRESS_SUDDEN_DELAY_INIT;
@@ -899,31 +908,56 @@ void loop() //******************************************************************
                     // bot button held actions, fade down
                     if (DEBUG == true) // {{ DEBUG }}
                     {
-                        Serial.println(F("Fade Down"));
+                        Serial.print(F("Fade Down"));
+                        Serial.print(section[i]._button[b]->pressedCount);
+                        Serial.println(F(" presses"));
                     }
                     
+                   
 
+                    //fade
                     if (section[i]._button[b]->pressedTime == 0) // if button[i].pressedTime == 0 this is a NEW button press
-                        {
-                            section[i]._button[b]->pressedTime = currentTime; // save the time to detect multipresses
-                            section[i]._button[b]->pressedCount++;            // add one press to its counter
-                        }
-                        else if (currentTime >= section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
-                        {
+                    {
+                        section[i]._button[b]->pressedTime = currentTime; // save the time to detect multipresses
+                        section[i]._button[b]->pressedCount++;            // add one press to its counter
+                    }
+                    else if (currentTime >= section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
+                    {
+
+
+                        //HERE is after fade_delay, commence fading
+                        if (section[i].mode == (1 || 2) && section[i]._button[b]->pressedCount > 1) { // 2+ presses, effects colormodes 1 and 2 (rgb smooth and rgb sudden)
+
+                            // adjust speed of colorProgress
+                            // slow down (increase delay)
+                            if (colorProgressDelayCounter == COLOR_PROGRESS_DELAY_COUNTER_INIT) {   
+                                //adjust speed
+                                if (section[i].colorProgressInterval < 20000) {
+                                    section[i].colorProgressInterval++;
+                                }
+                                colorProgressDelayCounter = 0;
+                            } else {
+                                colorProgressDelayCounter++;
+                            }
+
+                        } else {       //1 press or not colormode 1||2
+
                             if (section[i]._button[b]->beingHeld == false) // if not yet held, initialize fading:
                             {
                                 section[i]._button[b]->beingHeld = true;
                             }
-
+                            float f = FADE_FACTOR;
                             if (currentTime >= section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY_RAPID)    //after QUICK_DELAY time, decrement an additional time per loop (double speed)
                             {
-                                masterFadeDecrement(i);
+                                f = FADE_FACTOR_RAPID;
                             }
-                            masterFadeDecrement(i);       //regular decrement
+                            masterFadeDecrement(i, f);       //regular decrement
                             updateLights(i);
-
-
                         }
+                    }
+                    
+
+                    
                     
 
 
@@ -932,16 +966,42 @@ void loop() //******************************************************************
                     // top button held actions, fade up
                     if (DEBUG == true) // {{ DEBUG }}
                     {
-                        Serial.println(F("Fade Up"));
+                        Serial.print(F("Fade Up: "));
+                        Serial.print(section[i]._button[b]->pressedCount);
+                        Serial.println(F(" presses"));
                     }
+                    
 
+                    //fade
                     if (section[i]._button[b]->pressedTime == 0) // if button[i].pressedTime == 0 this is a NEW button press
-                        {
-                            section[i]._button[b]->pressedTime = currentTime; // save the time to detect multipresses
-                            section[i]._button[b]->pressedCount++;            // add one press to its counter
-                        }
-                        else if (currentTime >= section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
-                        {
+                    {
+                        section[i]._button[b]->pressedTime = currentTime; // save the time to detect multipresses
+                        section[i]._button[b]->pressedCount++;            // add one press to its counter
+                    }
+                    else if (currentTime >= section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
+                    {
+
+
+
+
+
+                        //HERE is after fade_delay
+                        if (section[i].mode == (1 || 2) && section[i]._button[b]->pressedCount > 1) { // 2+ presses, effects colormodes 1 and 2 (rgb smooth and rgb sudden)
+
+                            // adjust speed of colorProgress
+                            // speed up (decrease delay)
+                            if (colorProgressDelayCounter == COLOR_PROGRESS_DELAY_COUNTER_INIT) {   
+                                //adjust speed
+                                
+                                if (section[i].colorProgressInterval > 1) {
+                                    section[i].colorProgressInterval--;
+                                }
+                                colorProgressDelayCounter = 0;
+                            } else {
+                                colorProgressDelayCounter++;
+                            }
+
+                        } else {       //1 press or not colormode 1||2
                             if (section[i]._button[b]->beingHeld == false) // if not yet held, initialize fading:
                             {
                                 section[i]._button[b]->beingHeld = true;
@@ -953,21 +1013,18 @@ void loop() //******************************************************************
                                 
                             }
 
+                            float f = FADE_FACTOR;
                             if (currentTime >= section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY_RAPID)    //after QUICK_DELAY time, increment an additional time per loop (double speed)
                             {
-                                masterFadeIncrement(i);
+                                f = FADE_FACTOR_RAPID;
                             }
-                            masterFadeIncrement(i);       //regular increment
+                            masterFadeIncrement(i, f);       //regular increment
                             updateLights(i);
-
-
-
                         }
 
-
+                    }
                     
                 }
-                
             } // end {button held} thread
         }     // end {check each section} loop
     }         // update timer
