@@ -538,88 +538,100 @@ void loop() //******************************************************************
                                     if (section[i]._button[b]->pressedCount > MAX_PRESS_COUNT)
                                         section[i]._button[b]->pressedCount = MAX_PRESS_COUNT;
 
-                                    switch (section[i]._button[b]->pressedCount) // handle button presses
+                                    switch (section[i]._button[b]->pressedCount) // handle button presses (releases actually)
                                     {
                                     case (3):       // 3 presses
                                         if (b == 1) // top button  action
                                         {
-                                            //  TRIPLE PRESS TOP: MAX BRIGHTNESS
-                                            if (DEBUG == true)
-                                            {
-                                                Serial.println(F(" TOP 3 "));
-                                                Serial.println(F("Max Brightness {mode:3}"));
-                                            }
-                                            section[i].mode = 3; // set to mode 3
+                                            //if not held past the fade point, we want max brightness. Otherwise, all we want is fade speed adjust, which happens way below.
+                                            if (currentTime < section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY) {
 
-                                            for (uint8_t k = 0; k < 4; k++)
-                                                section[i].RGBW[k] = 1;
-                                            section[i].isOn = true;
-                                            section[i].masterBrightness = 1;
+//NEED ANOTHER WAY TO CHECK THIS ABOVE, ALWAYS FALSE so NEVER LETS MAX BRIGHTNESS MODE ENGAGE
+
+                                                //  TRIPLE PRESS TOP: MAX BRIGHTNESS
+                                                if (DEBUG == true)
+                                                {
+                                                    Serial.println(F(" TOP 3 "));
+                                                    Serial.println(F("Max Brightness {mode:3}"));
+                                                }
+                                                section[i].mode = 3; // set to mode 3
+
+                                                for (uint8_t k = 0; k < 4; k++)
+                                                    section[i].RGBW[k] = 1;
+                                                section[i].isOn = true;
+                                                section[i].masterBrightness = 1;
+                                            }
+                                            
                                         }
                                         else // bottom button action
                                         {
-                                            // TRIPLE PRESS BOTTOM from on: if lights are on, turn off all EXCEPT PORCH. (If porch isn't on, turn all lights off.)
-                                            //                              if only PORCH is on, turn PORCH off.
-                                            // if no light is on, disco mode.
-                                            if (DEBUG == true)
-                                            {
-                                                Serial.println(F(" BOT 3 "));
-                                            }
-
-                                            // if (section[2].isOn == true) {  //if porch is on
-
-                                            // } else {
-
-                                            // }
-
-
-                                            bool on = false;
-                                            for (uint8_t k = 0; k < LIGHTSECTION_COUNT; k++) // check if any lights are on (except porch)
-                                            {
-                                                if (section[k].isOn = true && k != 2)
-                                                    on = true;
-                                            }
-                                            if (on == true) // excluding porch, if any are on, turn them off.
-                                            {
+                                            //if not held past the fade point, we want all off. Otherwise, all we want is fade speed adjust, which happens way below.
+                                            if (currentTime < section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY) {
+                                                // TRIPLE PRESS BOTTOM from on: if lights are on, turn off all EXCEPT PORCH. (If porch isn't on, turn all lights off.)
+                                                //                              if only PORCH is on, turn PORCH off.
+                                                // if no light is on, disco mode.
                                                 if (DEBUG == true)
                                                 {
-                                                    Serial.println(F("Light(s) are on, turn them off (except porch light)"));
+                                                    Serial.println(F(" BOT 3 "));
                                                 }
-                                                
-                                                for (uint8_t k = 0; k < LIGHTSECTION_COUNT; k++) // turn off all but porch
+
+                                                // if (section[2].isOn == true) {  //if porch is on
+
+                                                // } else {
+
+                                                // }
+
+
+                                                bool on = false;
+                                                for (uint8_t k = 0; k < LIGHTSECTION_COUNT; k++) // check if any lights are on (except porch)
                                                 {
-                                                    if (section[k].isOn = true && k != 2) // if the light is on and it's not the porch light,
+                                                    if (section[k].isOn = true && k != 2)
+                                                        on = true;
+                                                }
+                                                if (on == true) // excluding porch, if any are on, turn them off.
+                                                {
+                                                    if (DEBUG == true)
                                                     {
-                                                        section[k].isOn = false; // if "on," set to "off"
-                                                        section[k].colorProgress = false;
-                                                        for (uint8_t z = 0; z < 4; z++)
-                                                            section[k].RGBW[z] = 0; // and set values to 0 for each color for that light
-                                                        section[k].masterBrightness = 0;
+                                                        Serial.println(F("Light(s) are on, turn them off (except porch light)"));
+                                                    }
+                                                    
+                                                    for (uint8_t k = 0; k < LIGHTSECTION_COUNT; k++) // turn off all but porch
+                                                    {
+                                                        if (section[k].isOn = true && k != 2) // if the light is on and it's not the porch light,
+                                                        {
+                                                            section[k].isOn = false; // if "on," set to "off"
+                                                            section[k].colorProgress = false;
+                                                            for (uint8_t z = 0; z < 4; z++)
+                                                                section[k].RGBW[z] = 0; // and set values to 0 for each color for that light
+                                                            section[k].masterBrightness = 0;
+                                                        }
                                                     }
                                                 }
-                                            }
-                                            else if (section[2].isOn == true) // else if porch is on:
-                                            {
-                                                if (DEBUG == true)
+                                                else if (section[2].isOn == true) // else if porch is on:
                                                 {
-                                                    Serial.println(F("Only porch is on: turning off."));
-                                                }
+                                                    if (DEBUG == true)
+                                                    {
+                                                        Serial.println(F("Only porch is on: turning off."));
+                                                    }
 
-                                                section[2].isOn = false;
-                                                section[2].colorProgress = false;
-                                                for (uint8_t z = 0; z < 4; z++)
-                                                    section[2].RGBW[z] = 0; // and set values to 0 for each color for that light
-                                                section[2].masterBrightness = 0;
-                                            }
-                                            else  // else no lights are on so do:
-                                            {
-                                                if (DEBUG == true)
+                                                    section[2].isOn = false;
+                                                    section[2].colorProgress = false;
+                                                    for (uint8_t z = 0; z < 4; z++)
+                                                        section[2].RGBW[z] = 0; // and set values to 0 for each color for that light
+                                                    section[2].masterBrightness = 0;
+                                                }
+                                                else  // else no lights are on so do:
                                                 {
-                                                    Serial.println(F("Lights were off: disco mode!"));
-                                                }
+                                                    if (DEBUG == true)
+                                                    {
+                                                        Serial.println(F("Lights were off: disco mode!"));
+                                                    }
 
-                                                // TODO: all is off, disco mode
+                                                    // TODO: all is off, disco mode
+                                                }
                                             }
+
+                                            
                                         }
                                         break;
 
@@ -890,18 +902,17 @@ void loop() //******************************************************************
                 }
                 
             }
+
             else // else buttonStatus > 255; a button is being pressed.  // PRESSED ACTIONS (register a press, and do "held button" actions)
             {
                 if (DEBUG == true) // {{ DEBUG }}
                 {
-                    Serial.print(F(" section:"));
-                    Serial.print(i); // (print button reading)
-                    Serial.print(F(" pin:"));
-                    Serial.print(section[i].PIN); // (print button reading)
-                    Serial.print(F(" "));
-                    Serial.print(buttonStatus); // (print button reading)
+                    Serial.print(F(" section:")); Serial.print(i); // (print button reading)
+                    Serial.print(F(" pin:")); Serial.print(section[i].PIN); // (print button reading)
+                    Serial.print(F(" ")); Serial.print(buttonStatus); // (print button reading)
                     Serial.print(F(" | "));
                 }
+
                 if (buttonStatus >= (BUTTON_RES[0] - BUTTON_RESISTANCE_TOLERANCE) && buttonStatus <= (BUTTON_RES[0] + BUTTON_RESISTANCE_TOLERANCE))
                 {
                     uint8_t b = 0;
@@ -912,8 +923,6 @@ void loop() //******************************************************************
                         Serial.print(section[i]._button[b]->pressedCount);
                         Serial.println(F(" presses"));
                     }
-                    
-                   
 
                     //fade
                     if (section[i]._button[b]->pressedTime == 0) // if button[i].pressedTime == 0 this is a NEW button press
@@ -957,11 +966,8 @@ void loop() //******************************************************************
                     }
                     
 
-                    
-                    
-
-
-                } else if (buttonStatus >= (BUTTON_RES[1] - BUTTON_RESISTANCE_TOLERANCE) && buttonStatus <= (BUTTON_RES[1] + BUTTON_RESISTANCE_TOLERANCE)) {
+                } 
+                else if (buttonStatus >= (BUTTON_RES[1] - BUTTON_RESISTANCE_TOLERANCE) && buttonStatus <= (BUTTON_RES[1] + BUTTON_RESISTANCE_TOLERANCE)) {
                     uint8_t b = 1;
                     // top button held actions, fade up
                     if (DEBUG == true) // {{ DEBUG }}
@@ -971,7 +977,6 @@ void loop() //******************************************************************
                         Serial.println(F(" presses"));
                     }
                     
-
                     //fade
                     if (section[i]._button[b]->pressedTime == 0) // if button[i].pressedTime == 0 this is a NEW button press
                     {
@@ -981,12 +986,9 @@ void loop() //******************************************************************
                     else if (currentTime >= section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
                     {
 
-
-
-
-
                         //HERE is after fade_delay
-                        if (section[i].mode == (1 || 2) && section[i]._button[b]->pressedCount > 1) { // 2+ presses, effects colormodes 1 and 2 (rgb smooth and rgb sudden)
+                        if (section[i].mode == (1 || 2) && section[i]._button[b]->pressedCount > 1) { 
+                            // 2+ presses, effects colormodes 1 and 2 (rgb smooth and rgb sudden)
 
                             // adjust speed of colorProgress
                             // speed up (decrease delay)
@@ -1001,7 +1003,9 @@ void loop() //******************************************************************
                                 colorProgressDelayCounter++;
                             }
 
-                        } else {       //1 press or not colormode 1||2
+                        }
+                        else
+                        {       //1 press or not colormode 1||2 (rgb smooth / rgb sudden)
                             if (section[i]._button[b]->beingHeld == false) // if not yet held, initialize fading:
                             {
                                 section[i]._button[b]->beingHeld = true;
@@ -1022,9 +1026,9 @@ void loop() //******************************************************************
                             updateLights(i);
                         }
 
-                    }
-                    
-                }
+                    } //end held (top button)
+                } // end top button
+
             } // end {button held} thread
         }     // end {check each section} loop
     }         // update timer
