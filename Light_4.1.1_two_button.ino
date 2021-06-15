@@ -191,7 +191,7 @@ const uint8_t DIMMER_LOOKUP_TABLE[HEIGHT][WIDTH] PROGMEM = {
 const uint8_t CHANNELS = 64;
 const uint8_t MAX_PRESS_COUNT = 6;
 const uint16_t BUTTON_RES[2] = {488, 968};     // [0]bottom button returns ~3.3v    // [1]top button returns ~5v
-const uint8_t BUTTON_RESISTANCE_TOLERANCE = 100; // +/-
+const uint8_t BUTTON_RESISTANCE_TOLERANCE = 200; // +/-
 const uint16_t BUTTON_RELEASE_TIMER = 250;      // time before release action is processed; time allowed between release and next press for multipresses
 const uint8_t BUTTON_FADE_DELAY = 230;          // minimum time the button must be held to start "held" action;
 
