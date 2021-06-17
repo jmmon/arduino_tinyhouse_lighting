@@ -1,149 +1,21 @@
-/* The color fading pattern https://github.com/mathertel/DMXSerial/blob/master/examples/DmxSerialSend/DmxSerialSend.ino ******* COLOR ChANGING THRU DMX
-
-   WORKING 6/24 basic functionality
-   WORKS AS EXPECTED except extra color changing functionality
-   WORKS WELL
-
-
-
-
-  TWO BUTTON SYSTEM (up and down):
-  
-  TRIPLE PRESS TOP from on or off: MAX BRIGHTNESS on this section
-
-  TRIPLE HOLD TOP from on or off:
-
-  TRIPLE PRESS BOTTOM from off: if no lightsections are on, start disco mode.
-  TRIPLE PRESS BOTTOM from on: if only PORCH is on, turn PORCH off.
-                                if lights are on, turn all EXCEPT PORCH off. (If porch isn't on, turn all lights off.)
-  TRIPLE HOLD BOT from on or off:
-
-  DOUBLE PRESS TOP from off:  change to next mode and turn on
-  DOUBLE PRESS TOP from on: CHANGE TO NEXT MODE. [white mode, color mode (cycle or no), white+color mode (white at 50% of color)] + extra hidden index 3:[all lights max, not included in cycle change, only for triple press]
-  DOUBLE HOLD TOP from off:
-  DOUBLE HOLD TOP from on:
-
-  DOUBLE PRESS BOT from off: turn on last mode.
-  DOUBLE PRESS BOT from on: change back a mode?
-  DOUBLE HOLD BOT from off:
-  DOUBLE HOLD BOT from on:
-
-  
-  PRESS TOP from off: turn on light to default or to lastBrightness if available
-  PRESS TOP from on: cycle light brightness steps (35, 70, 100)
-  HOLD TOP from off: fade up white light
-  HOLD TOP from on: fade up current mode.
-
-  PRESS BOT from off: turn on nightlight mode (red and/or ww)
-  PRESS BOT from on: turn off.
-  HOLD BOT from off: turn on nightlight mode and fade down
-  HOLD BOT from on: fade down current mode.
-
-
-
-  Default mode (WW):  [0]
-  tap top: if wasOff turn on LAST BRIGHTNESS LEVEL (or default if it was 0). if wasOn, cycle through [low, med, bright] starting from where the brightness was
-  hold top: increase brightness
-  hold bottom: decrease brightness
-  tap bottom: turn off
-
-  color change mode   [1]
-  up press: pause, resume color change mode
-  up hold: fade up
-  down hold: fade down
-  down press: cancel color change mode, set at equivalent brightness to colorChangeMode.brightness
-
-  color change (sudden rather than smooth)   [2]?
-  tap top: pause, resume color change mode
-  up hold: fade up
-  down hold: fade down
-  down press: cancel color change mode, set at equivalent brightness to colorChangeMode.brightness
-
-  hidden[...2](
-  Max brightness (RGBW):  [3]   //not included in normal cycle; "hidden"
-    tap top: (if on) {if isMax {go default brightness} else {go max brightness}}  //toggle between max and medium, maybe make 4 steps?
-    hold top: increase brightness
-    hold bottom: decrease brightness
-    tap bottom: turn off
-
-  Nightlight (RW): [4]    //special case, tap bottom from [off]
-    tap top: cycle up brightness (low, medium, high) OR (medium, high, low)
-    hold top: fade
-    hold bottom: fade
-    tap bottom: turn off
-  )
-
-  so, section needs to save a mode for it's current mode, and using that mode along with whether the color is on or off, decide what to do.
-  still only need to deal with single, double, triple presses, and hold functions for single press.
-
-
-   On press, add 1 to press counter   //check if buttons have been released (releaseTimer)??      (Start of buttonSequence
-      start heldDelayTimer //delay before it starts to adjust
-   On release
-      start release timer    //max time between release and new press
-
-   if heldDelayTImer is ended, check state of button.   //held long enough for fade up / down ( end of buttonSequence )
-    if held, (if releaseTimer is 0 (button has not been released lately) == double check)
-      then held, do held action (based on pressCounter will do held action for 1, 2, or 3 presses)
-    if not held,    //no action
-
-   after end of releaseTimer, check button?       //quarter second after release of first, second, third press
-    if button == 0 && releaseTimer == 0     //no additional button was pressed
-      end of this buttonSequence
-      start action based on buttonCount
-      reset button count
-    if button was pressed
-      do nothing
-    (register an additional buttonpress with "On Press" so postpone action until decision is finalized)
-*/
-
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-/*
-Notes: current system:
-(Loops every 20 ms to register signal of button 0, 1, or no signal)
-Button is pressed, timer starts for that button
-  While button is pressed {
-    (check for release)
-    if held, check if held long enough to start fading the light
-    if release {
-      reset start timer, initiate new timer for release
-      if was fading, stop fading
-    Once new timer is up {
-      reset timer (stop counting multipresses)
-      if not fading (indicates a button tap), turn on light and/or go brighter one level
-button cycle now complete
-
-
-
-How to add colorProgress speed adjustment? currently refreshes every cycle (20ms), but if I want it to go faster it needs to refresh faster
-    so, put colorProgesss on its own separate timer.
-
-    So in the loop, I'll have a colorProgress timer, and for smooth it will refresh every (n) ms (initializing at 20ms)
-        and for sudden it should refresh every (n) ms (initializing at maybe 3000ms)
-
-    double-press and hold will increase or decrease n to a max of x or a min of 1ms
-
-*/
 #include <avr/pgmspace.h>
 #include <DmxSimple.h>
 const String VERSION = "Light_4.0.0: Structs and Light ID\n - SERIAL Enabled; DMX Disabled";
-const bool DEBUG = false; // DEBUG }}
+const bool DEBUG = false;
 
-const uint8_t DMX_PIN = 3;
+const uint8_t   KITCHEN_BUTTON_PIN  =   A3,
+                ENTRY_BUTTON_PIN    =   A4,
+                ENTRY2_BUTTON_PIN   =   A2,
+                BATH_BUTTON_PIN     =   A5,
+                // SCONCE_BUTTON_PIN = A2;
+                // BACKWALL_BUTTON_PIN = A5;
 
-const uint8_t KITCHEN_BUTTON_PIN = A3;
-const uint8_t ENTRY_BUTTON_PIN = A4;
-const uint8_t ENTRY2_BUTTON_PIN = A2;
-const uint8_t BATH_BUTTON_PIN = A5;
-//const uint8_t SCONCE_BUTTON_PIN = A2;
-//const uint8_t BACKWALL_BUTTON_PIN = A5;
+                        DMX_PIN     =   3;
 
 //light values lookup table, built on an S curve, to make LED dimming feel linear. 1024 stages.
 //Storing in PROGMEM allows for such a large array (1023 values). Without PROGMEM, an array of 512 values pushed the limit of dynamic memory but now it's ~51%.
-const uint8_t WIDTH = 32;
-const uint8_t HEIGHT = 32;
+const uint8_t   WIDTH   = 32,
+                HEIGHT  = 32;
 const uint16_t TABLE_SIZE = 1023;
 const uint8_t DIMMER_LOOKUP_TABLE[HEIGHT][WIDTH] PROGMEM = {
 { 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, },
@@ -189,9 +61,12 @@ const uint8_t DIMMER_LOOKUP_TABLE[HEIGHT][WIDTH] PROGMEM = {
 
 
 const uint8_t CHANNELS = 64;
-const uint8_t MAX_PRESS_COUNT = 6;
 const uint16_t BUTTON_RES[2] = {488, 968};     // [0]bottom button returns ~3.3v    // [1]top button returns ~5v
 const uint8_t BUTTON_RESISTANCE_TOLERANCE = 200; // +/-
+const uint8_t LOOP_DELAY_INTERVAL = 20; // refresh speed in ms          {for ms=1: factor=0.00001; amount=0.018}
+
+
+const uint8_t MAX_PRESS_COUNT = 6;
 const uint16_t BUTTON_RELEASE_TIMER = 250;      // time before release action is processed; time allowed between release and next press for multipresses
 const uint8_t BUTTON_FADE_DELAY = 230;          // minimum time the button must be held to start "held" action;
 
@@ -202,17 +77,16 @@ const float DEFAULT_BRIGHTNESS = 0.40; // 0-1 (percent) value for default bright
 const float FADE_FACTOR = 0.0050;      //base fade adjustment; modified by section[].BRIGHTNESS_FACTOR
 const float FADE_FACTOR_RAPID = 0.01;    //after BUTTON_FADE_DELAY_RAPID ms, this is applied instead
 
-const uint8_t LOOP_DELAY_INTERVAL = 20; // refresh speed in ms          {for ms=1: factor=0.00001; amount=0.018}
 uint32_t loopStartTime = 0;             // loop start time
-const float MIDDLE = 0.878;
+const float _MID = 0.878;
 const float _HIGH = 0.995;
 const float _LOW = 0.6;
-//const float RED_LIST[] = {1., MIDDLE, 0, 0, 0, MIDDLE}; // colorProgress cycle layout
-//const float GREEN_LIST[] = {0, MIDDLE, 1., MIDDLE, 0, 0};
-//const float BLUE_LIST[] = {0, 0, 0, MIDDLE, 1., MIDDLE};
-const float RED_LIST[] = {1., _HIGH, MIDDLE, _LOW, 0, 0, 0, 0, 0, _LOW, MIDDLE, _HIGH}; // colorProgress cycle layout
-const float GREEN_LIST[] = {0, _LOW, MIDDLE, _HIGH, 1., _HIGH, MIDDLE, _LOW, 0, 0, 0, 0};
-const float BLUE_LIST[] = {0, 0, 0, 0, 0, _LOW, MIDDLE, _HIGH, 1., _HIGH, MIDDLE, _LOW};
+//const float RED_LIST[] = {1., _MID, 0, 0, 0, _MID}; // colorProgress cycle layout
+//const float GREEN_LIST[] = {0, _MID, 1., _MID, 0, 0};
+//const float BLUE_LIST[] = {0, 0, 0, _MID, 1., _MID};
+const float RED_LIST[] = {1., _HIGH, _MID, _LOW, 0, 0, 0, 0, 0, _LOW, _MID, _HIGH}; // colorProgress cycle layout
+const float GREEN_LIST[] = {0, _LOW, _MID, _HIGH, 1., _HIGH, _MID, _LOW, 0, 0, 0, 0};
+const float BLUE_LIST[] = {0, 0, 0, 0, 0, _LOW, _MID, _HIGH, 1., _HIGH, _MID, _LOW};
 const uint8_t COLOR_PROGRESS_DELAY_COUNT = 0;   // n delay cycles per progress cycle
 const uint8_t COLOR_PROGRESS_DELAY_SUDDEN = 0;
 const float COLOR_PROGRESS_FADE_AMOUNT = 0.001; //modified if faded so interval is the same if faded. fade not yet implemented.
@@ -234,7 +108,6 @@ const uint8_t COLOR_PROGRESS_DELAY_COUNTER_INIT = 5;    // 5 * 20ms (main loop t
 
 struct button_t
 {
-
     uint32_t releaseTimer; //when was this button released?
     uint32_t pressedTime;  //when was this button pressed?
     uint16_t pressedDuration;  // time from press to release
@@ -242,44 +115,51 @@ struct button_t
     bool beingHeld;        //is the button being held? (for longer than BUTTON_FADE_DELAY
 
 } button[] = {
-
-    {0, 0, 0, 0, false}, //entry button up         inside underloft
+    // two per section:
+    // Inside underloft
+    {0, 0, 0, 0, false}, //entry button up         
     {0, 0, 0, 0, false}, //entry button down
 
-    {0, 0, 0, 0, false}, //entry2 button up       outside
+    // Outside (Porch)
+    {0, 0, 0, 0, false}, //entry2 button up
     {0, 0, 0, 0, false}, //entry2 button down
 
+    // Kitchen underloft
     {0, 0, 0, 0, false}, //kitchen left wall
     {0, 0, 0, 0, false}, //kitchen
 
-    {0, 0, 0, 0, false}, //bath right nook
+    // Bathroom (back wall right nook)
+    {0, 0, 0, 0, false}, //bath
     {0, 0, 0, 0, false},
+
     //Back wall button
+    // {0, 0, 0, 0, false}, //Back wall (left) / Greenhouse?
+    // {0, 0, 0, 0, false},
+
     //sconce 1 button close button
 };
 
 
 struct section_t
 {
-
-    float RGBW[4];     //stores current RGBW color levels
-    float lastRGBW[4]; //last color levels
+    float RGBW[4];     // stores current RGBW color levels
+    float lastRGBW[4]; // last color levels
     float masterBrightness;
     int8_t mode; // 0-4: WW, colors, colors+ww, (All, Nightlight)
-    uint8_t lastMode;                                                                               // not used
+    uint8_t lastMode;         // not used
     //typical cycle is 0-1-2-0... modes 3 and 4 are hidden from the typical cycle.
     bool isOn;               // Are any levels > 0?
     float BRIGHTNESS_FACTOR; // affects [default brightness + fade speed], pref range [0-1]
     uint8_t DMXout;          // DMX OUT number (set of 4 channels) this section controls
-    //colorProgress variables for this section
-    uint8_t colorDelayCounter; //slows the color cycle
-    uint8_t colorState;        //next color state in the cycle
-    bool colorProgress;        //while true, colors for this section will cycle
+    // colorProgress variables for this section
+    uint8_t colorDelayCounter; // slows the color cycle
+    uint8_t colorState;        // next color state in the cycle
+    bool colorProgress;        // while true, colors for this section will cycle
 
-    uint32_t colorProgressTimerStart;   //starting time of colorProgress
+    uint32_t colorProgressTimerStart;   // starting time of colorProgress
     uint16_t colorProgressInterval;     // adjust this to change colorProgress speed
 
-    float nextRGB[3]; //next state of RGB for colorProgress cycle. Stores index of lookup table. Could be modified by colorFadeLevel to change the max level for the colorProgress.
+    float nextRGB[3]; // next state of RGB for colorProgress cycle. Stores index of lookup table. Could be modified by colorFadeLevel to change the max level for the colorProgress.
     float colorCycleFadeLevel;
     int8_t colorCycleFadeDir;
 
@@ -310,6 +190,45 @@ struct section_t
 //                                          End Variables
 
 //******************************************************************************************************************************************************** 
+
+
+
+/*
+
+
+        Break up each different action into different functions? ideas:
+
+fade increase, (done)
+fade decrease, (done)
+
+top button press, 
+bottom button press, 
+
+or even top button one press, 
+top button two press, 
+top button three press, 
+etc, 
+
+top button hold, 
+top button double hold, 
+top button triple hold, 
+bottom...etc, 
+
+
+
+progressSmooth, 
+progressSudden, 
+
+Switch mode up, 
+switch mode down, 
+
+could move all the debug sections to thier own function on its own page?, 
+
+
+*/
+
+
+
 
 void updateLights(uint8_t i)
 {                            //updates a specific light section
@@ -458,6 +377,7 @@ void progressColor(uint8_t i)
     }
     updateLights(i);
 }
+
 
 void setup() //****************************************************************************************************************************** SETUP
 {
