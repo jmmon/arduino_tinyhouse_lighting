@@ -1,3 +1,35 @@
+/*
+
+
+    Break up each different action into different functions? ideas:
+
+fade increase, (done)
+fade decrease, (done)
+
+or even top button one press, (done)
+top button two press,  (done)
+top button three press,  (done)
+etc,  (done)
+
+
+
+top button hold, 
+top button double hold, 
+top button triple hold, 
+bottom...etc, 
+
+progressSmooth, 
+progressSudden, 
+
+Switch mode up, 
+switch mode down, 
+
+could move all the debug sections to thier own function on its own page?, 
+
+
+*/
+
+
 void updateLights(uint8_t i)
 {                            //updates a specific light section
     uint8_t brightnessValue; //index for brightness lookup table
