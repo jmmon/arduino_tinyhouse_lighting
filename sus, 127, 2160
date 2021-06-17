@@ -1,0 +1,77 @@
+[33mcommit 170f0f913c66452a9b9d0884abd79167d64f1a4b[m[33m ([m[1;36mHEAD -> [m[1;32mimplement-speed-adj-ability[m[33m, [m[1;31morigin/implement-speed-adj-ability[m[33m)[m
+Author: jmmon <jmmon93@gmail.com>
+Date:   Tue Jun 15 11:30:15 2021 -0400
+
+    cleaned up spacing and comments, code unchanged
+
+[33mcommit 43d6a2becd8123e9ca94aabb1cb22f8a8a175c1a[m
+Author: jmmon <jmmon93@gmail.com>
+Date:   Tue Jun 15 08:41:10 2021 -0400
+
+    smooth mode speed adj works, sudden mode works but also fades brightness; max brightness mode disabled accidentally
+
+[33mcommit 98e98b3035d4831bf0fcb66707f2667b128eed54[m
+Author: jmmon <jmmon93@gmail.com>
+Date:   Tue Jun 15 07:54:25 2021 -0400
+
+    this should be the most recent working code, and resistance tolerance was adjusted
+
+[33mcommit 4287314a81a645283d08bfbc24877c065f26faa3[m
+Author: jmmon <jmmon93@gmail.com>
+Date:   Tue Jun 15 07:44:23 2021 -0400
+
+    .json files adjust
+
+[33mcommit ef405962ab60268930124ca9de3f49cbe5813865[m
+Author: jmmon <jmmon93@gmail.com>
+Date:   Mon Jun 7 08:18:44 2021 -0600
+
+    adjusted button resistances
+
+[33mcommit 9057422500ab553d886cd251afc38adad2844fe4[m
+Author: jmmon <jmmon93@gmail.com>
+Date:   Fri Jan 15 07:22:40 2021 -0600
+
+    not working quite right, started implementation
+
+[33mcommit ee994fd18e51e78202798827939f1b41efdae028[m[33m ([m[1;31morigin/colorProgress-speed-adj[m[33m, [m[1;32mcolorProgress-speed-adj[m[33m)[m
+Author: jmmon <jmmon93@gmail.com>
+Date:   Thu Jan 14 12:38:14 2021 -0600
+
+    bugfix separate colorProgress timer, make smooth mode initialize with a color instead of off
+
+[33mcommit e90b52eb1a53a4ffecd1624dd3d8ba197eae9264[m
+Author: jmmon <jmmon93@gmail.com>
+Date:   Thu Jan 14 11:46:16 2021 -0600
+
+    transfer colorProgress to separate timer WITHOUT adding fading function yet
+
+[33mcommit a4912d252a51de33c07cf1863a75d4dabdda7904[m
+Author: jmmon <jmmon93@gmail.com>
+Date:   Thu Jan 14 11:41:32 2021 -0600
+
+    initial commit
+
+[33mcommit 2f1621e2b9aba229908dfadb2e2aab3dc1f2fd55[m[33m ([m[1;31morigin/master[m[33m, [m[1;32mmaster[m[33m)[m
+Author: jmmon <jmmon93@gmail.com>
+Date:   Thu Jan 14 10:04:51 2021 -0600
+
+    added sudden colorProgress mode (mode 2)
+
+[33mcommit bd5a707b385c42b0c56ea7e757254b3183973759[m
+Author: jmmon <jmmon93@gmail.com>
+Date:   Wed Jan 13 15:53:44 2021 -0600
+
+    new idea for 1 timer
+
+[33mcommit 3ffa48cde7740fb6cb9366ce91723948aef0bf04[m
+Author: jmmon <jmmon93@gmail.com>
+Date:   Wed Jan 6 14:55:46 2021 -0600
+
+    update readme with changed layout
+
+[33mcommit dfd8a15f0f1f98c48b197f19c78c15f9e7ba4c12[m
+Author: jmmon <jmmon93@gmail.com>
+Date:   Thu Dec 31 10:04:08 2020 -0800
+
+    initial commit
