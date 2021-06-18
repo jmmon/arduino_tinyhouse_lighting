@@ -138,14 +138,8 @@ struct section_t
     //  ID     Greenhouse Lights
 };
 
-//******************************************************************************************************************************************************** 
 
-//                                          End Variables
-
-//******************************************************************************************************************************************************** 
-
-
-void setup() //****************************************************************************************************************************** SETUP
+void setup()
 {
     if (DEBUG == true)
     { // DEBUG }}
@@ -170,10 +164,10 @@ void setup() //*****************************************************************
     loopStartTime = millis();
 }
 
-void loop() //********************************************************************************************************************************* LOOP
+
+void loop()
 {
     uint32_t currentTime = millis();
-
     for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) 
     {
         if (section[i].colorProgress == true) 
@@ -186,18 +180,16 @@ void loop() //******************************************************************
         }
     }
 
-
     if ((currentTime - loopStartTime) >= LOOP_DELAY_INTERVAL) // 20ms loop
     {
         loopStartTime += LOOP_DELAY_INTERVAL; // set time for next timer
 
         for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) 
         {
-            uint16_t buttonStatus = analogRead(section[i].PIN); // check if any buttons are pressed
-            
-            // REGISTER RELEASES:
+            uint16_t buttonStatus = analogRead(section[i].PIN);
             if (buttonStatus <= 256) // if no button is pressed:
             {
+                // REGISTER RELEASES:
                 for (uint8_t b = 0; b < 2; b++) 
                 {
                     // check if button[i] was pressed on the last loop by checking for non-zero pressedTime
@@ -208,21 +200,18 @@ void loop() //******************************************************************
                         section[i]._button[b]->releaseTimer = currentTime + BUTTON_RELEASE_TIMER;
                         section[i]._button[b]->pressedTime = 0;
                     }
-                    else 
-                    // else if pressedTime == 0 then button[i] is already "RELEASED":
+                    else // else button[i] is already "RELEASED":
                     {
                         // wait for releaseTimer before commencing "release actions," in case user is attempting a double or triple press.
                         if (currentTime >= section[i]._button[b]->releaseTimer) 
                         {
-                            
-                            // this is where we process the "button was pressed x times" action
-                            if (section[i]._button[b]->beingHeld == true) //mark as not held in case it was
+                            if (section[i]._button[b]->beingHeld == true) 
                             {
+                                //mark as not held in case it was
                                 section[i]._button[b]->beingHeld = false;
                             }
                             else    //if button is not held commence Release action
                             {
-                                uint8_t brightness = 0;
                                 if (section[i]._button[b]->pressedCount > 0)
                                 {
                                     if (section[i]._button[b]->pressedCount > MAX_PRESS_COUNT)
@@ -263,41 +252,32 @@ void loop() //******************************************************************
                                     updateLights(i);
                                 }
                             }
-                            // after RELEASE ACTIONS, reset pressedCount counter to 0.
+                            // after RELEASE ACTIONS:
                             section[i]._button[b]->pressedCount = 0; 
-                        }                                            // END RELEASE ACTIONS (button press)
+                        } // END RELEASE ACTIONS (button press)
                     }
                 }
-
             }
-            else // else buttonStatus > 255; a button is being pressed.  // PRESSED ACTIONS (register a press, and do "held button" actions)
+            else
             {
-
-                //this is where the pressed actions reside:
-
-                if (DEBUG == true) // {{ DEBUG }}
+                // else buttonStatus > 255: register press / do "held button" actions
+                if (DEBUG == true)
                 {
-                    Serial.print(F(" section:")); Serial.print(i); // (print button reading)
-                    Serial.print(F(" pin:")); Serial.print(section[i].PIN); // (print button reading)
-                    Serial.print(F(" ")); Serial.print(buttonStatus); // (print button reading)
+                    Serial.print(F(" section:")); Serial.print(i);
+                    Serial.print(F(" pin:")); Serial.print(section[i].PIN);
+                    Serial.print(F(" ")); Serial.print(buttonStatus);
                     Serial.print(F(" | "));
                 }
 
                 if (buttonStatus >= (BUTTON_RES[1] - BUTTON_RESISTANCE_TOLERANCE) && buttonStatus <= (BUTTON_RES[1] + BUTTON_RESISTANCE_TOLERANCE)) 
                 {
-
                     heldTopButtonActions(i, currentTime);
-
                 } // end top button
                 else if (buttonStatus >= (BUTTON_RES[0] - BUTTON_RESISTANCE_TOLERANCE) && buttonStatus <= (BUTTON_RES[0] + BUTTON_RESISTANCE_TOLERANCE))
                 {
-
                     heldBottomButtonActions(i, currentTime);
-                    
-                } 
-                
-
+                }
             } // end {button held} thread
-        }     // end {check each section} loop
-    }         // update timer
+        } // end {check each section} loop
+    } // update timer
 } // void loop

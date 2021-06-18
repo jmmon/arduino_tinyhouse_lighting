@@ -1,7 +1,4 @@
-/*
-
-
-    Break up each different action into different functions? ideas:
+/*  Break up each different action into different functions? ideas:
 
 fade increase, (done)
 fade decrease, (done)
@@ -11,51 +8,63 @@ top button two press,  (done)
 top button three press,  (done)
 etc,  (done)
 
+Switch mode (done)
+top hold, (done)
+bottom hold (done)
 
 
-top button hold, 
-top button double hold, 
-top button triple hold, 
-bottom...etc, 
 
 progressSmooth, 
 progressSudden, 
 
-Switch mode up, 
-switch mode down, 
-
 could move all the debug sections to thier own function on its own page?, 
-
 
 */
 
+void switchMode(uint8_t nn, uint32_t ccTime) {
+    switch (section[nn].mode) // turn on the mode:
+    {
+        case (0): // to: white,  from: RGB smooth
+            section[nn].colorProgress = false;
+            for (uint8_t k = 0; k < 4; k++)
+            {
+                section[nn].RGBW[k] = 0;
+            }
+
+            section[nn].RGBW[3] = 1;
+            section[nn].masterBrightness = section[nn].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
+
+            break;
+        case (1): // to: RGB smooth,  from: RGB sudden
+        case (2): // to: RGB sudden,  from: white
+            if (section[nn].colorProgress == false)
+            {
+                section[nn].colorProgress = true;
+                section[nn].colorState = random(12);
+
+                section[nn].RGBW[0] = RED_LIST[section[nn].colorState];
+                section[nn].RGBW[1] = GREEN_LIST[section[nn].colorState];
+                section[nn].RGBW[2] = BLUE_LIST[section[nn].colorState];
+                section[nn].RGBW[3] = 0;
+                updateLights(nn);
+
+                section[nn].masterBrightness = section[nn].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
+                section[nn].colorProgressTimerStart = ccTime;
+                section[nn].colorProgressInterval = COLOR_PROGRESS_SMOOTH_DELAY_INIT;
+            }
+            break;
+    }
+}
 
 void updateLights(uint8_t i)
 {                            //updates a specific light section
-    uint8_t brightnessValue; //index for brightness lookup table
-
     if (DEBUG == true)
-    { // DEBUG }}
-        uint8_t height = (uint16_t(section[i].RGBW[3] * section[i].masterBrightness * TABLE_SIZE) / HEIGHT);
-        uint8_t width = (uint16_t(section[i].RGBW[3] * section[i].masterBrightness * TABLE_SIZE) % WIDTH);
-        memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); //  looks up brighness from table and saves as uint8_t brightness ( sizeof(brightness) resolves to 1 [byte of data])
-        if (section[i].RGBW[3] > 0 && section[i].masterBrightness > 0 && brightnessValue == 0)
-        {
-            brightnessValue = 1;
-        }
-
-        Serial.print(F("width:")); Serial.print(width);
-        Serial.print(F(", height:")); Serial.print(height);
-        Serial.print(F(" lvl:")); Serial.print(brightnessValue);
-        Serial.print(F(" W: ")); Serial.print(section[i].RGBW[3]);
-        Serial.print(F(" R: ")); Serial.print(section[i].RGBW[0]);
-        Serial.print(F(" G: ")); Serial.print(section[i].RGBW[1]);
-        Serial.print(F(" B: ")); Serial.print(section[i].RGBW[2]);
-        Serial.print(F(" Master brightness: ")); Serial.print(section[i].masterBrightness);
-        Serial.print(F(" t:")); Serial.println(millis());
+    {
+        updateLightsDEBUG(i);
     }
     else
     {
+        uint8_t brightnessValue; //index for brightness lookup table
         for (uint8_t k = 0; k < 4; k++)
         {
             uint8_t height = (uint16_t(section[i].RGBW[k] * section[i].masterBrightness * TABLE_SIZE) / HEIGHT);
@@ -73,6 +82,7 @@ void updateLights(uint8_t i)
             section[i].lastRGBW[k] = section[i].RGBW[k];
         }
     }
+    
     if (section[i].RGBW[3] <= 0 && section[i].RGBW[0] <= 0 && section[i].RGBW[1] <= 0 && section[i].RGBW[2] <= 0)
     {
         section[i].isOn = false;
@@ -117,7 +127,10 @@ void progressColor(uint8_t i)
 
         section[i].colorState += 1;
         if (section[i].colorState == 12)
+        {
             section[i].colorState = 0;
+        }
+
         if (DEBUG == true)
         {
             Serial.print(F("color progress state: ")); Serial.println(section[i].colorState);
