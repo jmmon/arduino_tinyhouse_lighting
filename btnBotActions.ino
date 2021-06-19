@@ -1,11 +1,9 @@
 // fade down
-void heldBottomButtonActions(uint8_t n, uint32_t cTime) {
+void heldBotBtnActions(uint8_t n, uint32_t cTime) {
     uint8_t b = 0;
     if (DEBUG == true)
     {
-        Serial.print(F("Fade Down"));
-        Serial.print(section[n]._button[b]->pressedCount);
-        Serial.println(F(" presses"));
+        heldBotBtnActionsDEBUG(n, b);
     }
 
     // if NEW button press
@@ -19,7 +17,7 @@ void heldBottomButtonActions(uint8_t n, uint32_t cTime) {
         switch (section[n]._button[b]->pressedCount)
         {
             case (3):
-                if (section[n].mode == (1 || 2))
+                if (section[n].mode == 1 || section[n].mode == 2)
                 {
                     // slow down colorProgress (increase delay)
                     if (colorProgressDelayCounter == COLOR_PROGRESS_DELAY_COUNTER_INIT) {   
@@ -41,16 +39,14 @@ void heldBottomButtonActions(uint8_t n, uint32_t cTime) {
                 {
                     section[n]._button[b]->beingHeld = true;
                 }
-
-                //after QUICK_DELAY time, adjust double fast
+                
                 float f = FADE_FACTOR;
                 if (cTime >= section[n]._button[b]->pressedTime + BUTTON_FADE_DELAY_RAPID)   
                 {
-                    f = FADE_FACTOR_RAPID;
+                    f = FADE_FACTOR_RAPID; // after QUICK_DELAY time, adjust double fast
                 }
 
-                masterFadeDecrement(n, f);       //regular decrement
-                updateLights(n);
+                masterFadeDecrement(n, f);       // regular decrement
                 break;
         }
     }
@@ -144,7 +140,7 @@ void botAction3p(uint8_t n, uint32_t cTime, uint8_t m) {
 void botAction2p(uint8_t n, uint32_t cTime) {
     if (DEBUG == true)
     {
-        Serial.println(F(" BOT 2 "));
+        botAction2pDEBUG(n);
     }
 
     if (section[n].isOn == true)
@@ -154,44 +150,7 @@ void botAction2p(uint8_t n, uint32_t cTime) {
         {
             section[n].mode = NUM_OF_MODES_CYCLE - 1;
         }
-
-        if (DEBUG == true)
-        {
-            Serial.print(F("Now in mode: ")); Serial.println(section[n].mode);
-        }
         switchMode(n, cTime);
-        // switch (section[n].mode) // turn on the mode:
-        // {
-        //     case (0): // to: white,  from: RGB smooth
-        //         section[n].colorProgress = false;
-        //         for (uint8_t k = 0; k < 4; k++)
-        //         {
-        //             section[n].RGBW[k] = 0;
-        //         }
-
-        //         section[n].RGBW[3] = 1;
-        //         section[n].masterBrightness = section[n].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
-
-        //         break;
-        //     case (1): // to: RGB smooth,  from: RGB sudden
-        //     case (2): // to: RGB sudden,  from: white
-        //         if (section[n].colorProgress == false)
-        //         {
-        //             section[n].colorProgress = true;
-        //             section[n].colorState = random(12);
-
-        //             section[n].RGBW[0] = RED_LIST[section[n].colorState];
-        //             section[n].RGBW[1] = GREEN_LIST[section[n].colorState];
-        //             section[n].RGBW[2] = BLUE_LIST[section[n].colorState];
-        //             section[n].RGBW[3] = 0;
-        //             updateLights(n);
-
-        //             section[n].masterBrightness = section[n].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
-        //             section[n].colorProgressTimerStart = cTime;
-        //             section[n].colorProgressInterval = COLOR_PROGRESS_SMOOTH_DELAY_INIT;
-        //         }
-        //         break;
-        // }
     }
 }
 

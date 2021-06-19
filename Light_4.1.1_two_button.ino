@@ -142,9 +142,8 @@ struct section_t
 void setup()
 {
     if (DEBUG == true)
-    { // DEBUG }}
-        Serial.begin(9600);
-        Serial.println(VERSION);
+    {
+        Serial.begin(9600); Serial.println(VERSION);
     }
     else
     {
@@ -258,26 +257,24 @@ void loop()
                     }
                 }
             }
-            else
+            else // else buttonStatus > 255: register press / do "held button" actions
             {
-                // else buttonStatus > 255: register press / do "held button" actions
                 if (DEBUG == true)
                 {
-                    Serial.print(F(" section:")); Serial.print(i);
-                    Serial.print(F(" pin:")); Serial.print(section[i].PIN);
-                    Serial.print(F(" ")); Serial.print(buttonStatus);
-                    Serial.print(F(" | "));
+                    heldActionsDEBUG(i, buttonStatus);
                 }
 
-                if (buttonStatus >= (BUTTON_RES[1] - BUTTON_RESISTANCE_TOLERANCE) && buttonStatus <= (BUTTON_RES[1] + BUTTON_RESISTANCE_TOLERANCE)) 
+                if (buttonStatus >= (BUTTON_RES[1] - BUTTON_RESISTANCE_TOLERANCE) && 
+                    buttonStatus <= (BUTTON_RES[1] + BUTTON_RESISTANCE_TOLERANCE)) 
                 {
-                    heldTopButtonActions(i, currentTime);
-                } // end top button
-                else if (buttonStatus >= (BUTTON_RES[0] - BUTTON_RESISTANCE_TOLERANCE) && buttonStatus <= (BUTTON_RES[0] + BUTTON_RESISTANCE_TOLERANCE))
-                {
-                    heldBottomButtonActions(i, currentTime);
+                    heldTopBtnActions(i, currentTime);
                 }
-            } // end {button held} thread
+                else if (buttonStatus >= (BUTTON_RES[0] - BUTTON_RESISTANCE_TOLERANCE) && 
+                    buttonStatus <= (BUTTON_RES[0] + BUTTON_RESISTANCE_TOLERANCE))
+                {
+                    heldBotBtnActions(i, currentTime);
+                }
+            }
         } // end {check each section} loop
-    } // update timer
+    } // timer
 } // void loop

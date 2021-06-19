@@ -105,6 +105,7 @@ void masterFadeIncrement(uint8_t i, float f)
     {
         section[i].masterBrightness = 1; // max
     }
+    updateLights(i);
 }
 
 void masterFadeDecrement(uint8_t i, float f)
@@ -117,16 +118,15 @@ void masterFadeDecrement(uint8_t i, float f)
     {
         section[i].masterBrightness = 0; // min
     }
+    updateLights(i);
 }
 
 void progressColor(uint8_t i)
 {
-    if (section[i].mode == 2) 
+    if (section[i].mode == 2) // sudden color changes
     {
-        //sudden color changes
-
         section[i].colorState += 1;
-        if (section[i].colorState == 12)
+        if (section[i].colorState >= 12)
         {
             section[i].colorState = 0;
         }
@@ -142,15 +142,17 @@ void progressColor(uint8_t i)
         section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
 
     } 
-    else if (section[i].mode == 1) 
+    else if (section[i].mode == 1) //smooth color changes
     {
-        //smooth color changes
-
         section[i].nextRGB[0] = RED_LIST[section[i].colorState]; // target levels for the current state
         section[i].nextRGB[1] = GREEN_LIST[section[i].colorState];
         section[i].nextRGB[2] = BLUE_LIST[section[i].colorState];
 
-        if ((section[i].nextRGB[0] == section[i].RGBW[0]) && (section[i].nextRGB[1] == section[i].RGBW[1]) && (section[i].nextRGB[2] == section[i].RGBW[2])) // Go to next state
+        if (
+            (section[i].nextRGB[0] == section[i].RGBW[0]) && 
+            (section[i].nextRGB[1] == section[i].RGBW[1]) && 
+            (section[i].nextRGB[2] == section[i].RGBW[2])
+            ) // Go to next state
         {
             section[i].colorState += 1;
             if (section[i].colorState == 12)
