@@ -20,6 +20,11 @@ void updateLightsDEBUG(uint8_t ii) {
     Serial.print(F(" t:")); Serial.println(millis());
 }
 
+void updateLightsOffDEBUG(uint8_t ii) {
+    Serial.print(F("MasterBrightness: ")); Serial.println(section[ii].masterBrightness);
+    Serial.print(F("IsOn:")); Serial.println(section[ii].isOn);
+}
+
 void heldActionsDEBUG(uint8_t ii, uint16_t bbuttonStatus) {
     Serial.print(F(" section:")); Serial.print(ii);
     Serial.print(F(" pin:")); Serial.print(section[ii].PIN);

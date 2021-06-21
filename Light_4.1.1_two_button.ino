@@ -68,7 +68,6 @@ struct button_t
     bool beingHeld;        //is the button being held? (for longer than BUTTON_FADE_DELAY
 
 } button[] = {
-    // two per section:
     // Inside underloft
     {0, 0, 0, 0, false}, //entry button up         
     {0, 0, 0, 0, false}, //entry button down
@@ -97,14 +96,15 @@ struct section_t
 {
     float RGBW[4];     // stores current RGBW color levels
     float lastRGBW[4]; // last color levels
+
     float masterBrightness;
     int8_t mode; // 0-4: WW, colors, colors+ww, (All, Nightlight)
-    uint8_t lastMode;         // not used
-    //typical cycle is 0-1-2-0... modes 3 and 4 are hidden from the typical cycle.
+            //typical cycle is 0-1-2-0... modes 3 and 4 are hidden from the typical cycle.
+
     bool isOn;               // Are any levels > 0?
     float BRIGHTNESS_FACTOR; // affects [default brightness + fade speed], pref range [0-1]
-    uint8_t DMXout;          // DMX OUT number (set of 4 channels) this section controls
-    // colorProgress variables for this section
+    uint8_t DMXout;          // DMX OUT number (set of 4 channels) for this section
+
     uint8_t colorDelayCounter; // slows the color cycle
     uint8_t colorState;        // next color state in the cycle
     bool colorProgress;        // while true, colors for this section will cycle
@@ -121,16 +121,60 @@ struct section_t
 
 } section[] = {
     //  ID 0    Living Room Lights
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 0.8, 4, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, ENTRY_BUTTON_PIN, {&button[0], &button[1]}},
+    {
+        {0., 0., 0., 0.}, 
+        {0., 0., 0., 0.}, 
+        1., 0, 
+        false, 0.8, 4, 
+        0, 0, false, 
+        0, 0, 
+        {0., 0., 0.}, 
+        1, 1, 
+        ENTRY_BUTTON_PIN, 
+        {&button[0], &button[1]}
+    },
 
     //  ID 1    Kitchen Lights
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 1, 3, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, KITCHEN_BUTTON_PIN, {&button[4], &button[5]}},
+    {
+        {0., 0., 0., 0.}, 
+        {0., 0., 0., 0.}, 
+        1., 0, 
+        false, 1, 3, 
+        0, 0, false, 
+        0, 0, 
+        {0, 0, 0}, 
+        1, 1, 
+        KITCHEN_BUTTON_PIN, 
+        {&button[4], &button[5]}
+    },
 
     //  ID 2   Porch Lights
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 0.9, 2, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, ENTRY2_BUTTON_PIN, {&button[2], &button[3]}},
+    {
+        {0., 0., 0., 0.}, 
+        {0., 0., 0., 0.}, 
+        1., 0, 
+        false, 0.9, 2, 
+        0, 0, false, 
+        0, 0, 
+        {0, 0, 0}, 
+        1, 1, 
+        ENTRY2_BUTTON_PIN, 
+        {&button[2], &button[3]}
+    },
 
     //  ID 3   bath
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 1.0, 1, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, BATH_BUTTON_PIN, {&button[6], &button[7]}},
+    {
+        {0., 0., 0., 0.}, 
+        {0., 0., 0., 0.}, 
+        1., 0, 
+        false, 1.0, 1, 
+        0, 0, false, 
+        0, 0, 
+        {0, 0, 0}, 
+        1, 1, 
+        BATH_BUTTON_PIN, 
+        {&button[6], &button[7]}
+    },
 
     //  ID     Overhead Bedroom
     //  ID     Overhead Main
@@ -174,7 +218,14 @@ void loop()
             if ((currentTime - section[i].colorProgressTimerStart) >= section[i].colorProgressInterval) 
             {
                 section[i].colorProgressTimerStart += section[i].colorProgressInterval;
-                progressColor(i);
+                if (section[i].mode == 2) // sudden color changes
+                {
+                    progressColorSudden(i);
+                }
+                else if (section[i].mode == 1) 
+                {
+                    progressColorSmooth(i);
+                }
             }
         }
     }

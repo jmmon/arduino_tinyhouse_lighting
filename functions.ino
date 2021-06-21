@@ -1,28 +1,5 @@
-/*  Break up each different action into different functions? ideas:
-
-fade increase, (done)
-fade decrease, (done)
-
-or even top button one press, (done)
-top button two press,  (done)
-top button three press,  (done)
-etc,  (done)
-
-Switch mode (done)
-top hold, (done)
-bottom hold (done)
-
-
-
-progressSmooth, 
-progressSudden, 
-
-could move all the debug sections to thier own function on its own page?, 
-
-*/
-
 void switchMode(uint8_t nn, uint32_t ccTime) {
-    switch (section[nn].mode) // turn on the mode:
+    switch (section[nn].mode)
     {
         case (0): // to: white,  from: RGB smooth
             section[nn].colorProgress = false;
@@ -56,6 +33,7 @@ void switchMode(uint8_t nn, uint32_t ccTime) {
     }
 }
 
+
 void updateLights(uint8_t i)
 {                            //updates a specific light section
     if (DEBUG == true)
@@ -83,17 +61,22 @@ void updateLights(uint8_t i)
         }
     }
     
-    if (section[i].RGBW[3] <= 0 && section[i].RGBW[0] <= 0 && section[i].RGBW[1] <= 0 && section[i].RGBW[2] <= 0)
+    if (
+            section[i].RGBW[0] <= 0 && 
+            section[i].RGBW[1] <= 0 && 
+            section[i].RGBW[2] <= 0 &&
+            section[i].RGBW[3] <= 0 
+        )
     {
         section[i].isOn = false;
         section[i].masterBrightness = 0;
         if (DEBUG == true)
         {
-            Serial.print(F("MasterBrightness: ")); Serial.println(section[i].masterBrightness);
-            Serial.print(F("IsOn:")); Serial.println(section[i].isOn);
+            updateLightsOffDEBUG(i);
         }
     }
 }
+
 
 void masterFadeIncrement(uint8_t i, float f)
 {
@@ -121,74 +104,74 @@ void masterFadeDecrement(uint8_t i, float f)
     updateLights(i);
 }
 
-void progressColor(uint8_t i)
+void progressColorSudden(uint8_t ii)
 {
-    if (section[i].mode == 2) // sudden color changes
+    section[ii].colorState += 1;
+    if (section[ii].colorState >= 12)
     {
-        section[i].colorState += 1;
-        if (section[i].colorState >= 12)
-        {
-            section[i].colorState = 0;
-        }
+        section[ii].colorState = 0;
+    }
 
+    if (DEBUG == true)
+    {
+        Serial.print(F("color progress state: ")); Serial.println(section[ii].colorState);
+    }
+
+    //set new light color
+    section[ii].RGBW[0] = RED_LIST[section[ii].colorState];
+    section[ii].RGBW[1] = GREEN_LIST[section[ii].colorState];
+    section[ii].RGBW[2] = BLUE_LIST[section[ii].colorState];
+
+    updateLights(ii);
+}
+
+
+void progressColorSmooth(uint8_t ii)
+{
+    section[ii].nextRGB[0] = RED_LIST[section[ii].colorState]; // target levels for the current state
+    section[ii].nextRGB[1] = GREEN_LIST[section[ii].colorState];
+    section[ii].nextRGB[2] = BLUE_LIST[section[ii].colorState];
+
+    // If ready to go to the next state
+    if (
+            (section[ii].nextRGB[0] == section[ii].RGBW[0]) && 
+            (section[ii].nextRGB[1] == section[ii].RGBW[1]) && 
+            (section[ii].nextRGB[2] == section[ii].RGBW[2])
+        )
+    {
+        section[ii].colorState += 1;
+        if (section[ii].colorState == 12)
+        {
+            section[ii].colorState = 0;
+        }
+            
         if (DEBUG == true)
         {
-            Serial.print(F("color progress state: ")); Serial.println(section[i].colorState);
+            Serial.print(F("color progress state: ")); Serial.println(section[ii].colorState);
         }
-
-        //set new light color
-        section[i].RGBW[0] = RED_LIST[section[i].colorState];
-        section[i].RGBW[1] = GREEN_LIST[section[i].colorState];
-        section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
-
-    } 
-    else if (section[i].mode == 1) //smooth color changes
+    }
+    else // else change colors to get closer to current state
     {
-        section[i].nextRGB[0] = RED_LIST[section[i].colorState]; // target levels for the current state
-        section[i].nextRGB[1] = GREEN_LIST[section[i].colorState];
-        section[i].nextRGB[2] = BLUE_LIST[section[i].colorState];
-
-        if (
-            (section[i].nextRGB[0] == section[i].RGBW[0]) && 
-            (section[i].nextRGB[1] == section[i].RGBW[1]) && 
-            (section[i].nextRGB[2] == section[i].RGBW[2])
-            ) // Go to next state
+        for (uint8_t k = 0; k < 3; k++) //rgb
         {
-            section[i].colorState += 1;
-            if (section[i].colorState == 12)
+            if (section[ii].RGBW[k] < section[ii].nextRGB[k])
             {
-                section[i].colorState = 0;
-            }
-                
-            if (DEBUG == true)
-            {
-                Serial.print(F("color progress state: ")); Serial.println(section[i].colorState);
-            }
-        }
-        else // else change colors to get closer to current state
-        {
-            for (uint8_t k = 0; k < 3; k++) //rgb
-            {
-                if (section[i].RGBW[k] < section[i].nextRGB[k])
+                section[ii].RGBW[k] += COLOR_PROGRESS_FADE_AMOUNT;
+                if (section[ii].RGBW[k] >= section[ii].nextRGB[k])
                 {
-                    section[i].RGBW[k] += COLOR_PROGRESS_FADE_AMOUNT;
-                    if (section[i].RGBW[k] >= section[i].nextRGB[k])
-                    {
-                        section[i].RGBW[k] = section[i].nextRGB[k];
-                    }
-                        
+                    section[ii].RGBW[k] = section[ii].nextRGB[k];
                 }
-                else if (section[i].RGBW[k] > section[i].nextRGB[k])
+            }
+            else if (section[ii].RGBW[k] > section[ii].nextRGB[k])
+            {
+                section[ii].RGBW[k] -= COLOR_PROGRESS_FADE_AMOUNT;
+                if (section[ii].RGBW[k] <= section[ii].nextRGB[k])
                 {
-                    section[i].RGBW[k] -= COLOR_PROGRESS_FADE_AMOUNT;
-                    if (section[i].RGBW[k] <= section[i].nextRGB[k])
-                    {
-                        section[i].RGBW[k] = section[i].nextRGB[k];
-                    }
-                        
+                    section[ii].RGBW[k] = section[ii].nextRGB[k];
                 }
             }
         }
     }
-    updateLights(i);
+    
+    updateLights(ii);
 }
