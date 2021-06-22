@@ -1,63 +1,45 @@
-// fade up
-void heldTopBtnActions(uint8_t n, uint32_t cTime) {
-    uint8_t b = 1;
-    if (DEBUG == true)
+void btnTopHeld(uint8_t ii, uint8_t bb, uint32_t cTime) {
+    switch (section[ii]._button[bb]->pressedCount)
     {
-        heldTopBtnActionsDEBUG(n, b);
-    }
-
-    // if NEW button press
-    if (section[n]._button[b]->pressedTime == 0) 
-    {
-        section[n]._button[b]->pressedTime = cTime; // save the time to detect multipresses
-        section[n]._button[b]->pressedCount++;            // add one press to its counter
-    }
-    else if (cTime >= section[n]._button[b]->pressedTime + BUTTON_FADE_DELAY) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
-    {
-        switch (section[n]._button[b]->pressedCount)
-        {
-            case (3):
-                if (section[n].mode == 1 || section[n].mode == 2)
-                {
-                    // speed up colorProgress (decrease delay)
-                    if (colorProgressDelayCounter == COLOR_PROGRESS_DELAY_COUNTER_INIT) {   
-                        if (section[n].colorProgressInterval > 1) 
-                        {
-                            section[n].colorProgressInterval--;
-                        }
-                        colorProgressDelayCounter = 0;
-                    } else {
-                        colorProgressDelayCounter++;
-                    }
-                }
-                break;
-            case (2):
-                break;
-            case (1):
-                // if not yet held, initialize fading:
-                if (section[n]._button[b]->beingHeld == false) 
-                {
-                    section[n]._button[b]->beingHeld = true;
-                    section[n].isOn = true;
-                    if (section[n].mode == 0)
+        case (3):
+            if (section[ii].mode == 1 || section[ii].mode == 2)
+            {
+                // speed up colorProgress (decrease delay)
+                if (colorProgressDelayCounter == COLOR_PROGRESS_DELAY_COUNTER_INIT) {   
+                    if (section[ii].colorProgressInterval > 1) 
                     {
-                        section[n].RGBW[3] = 1;
+                        section[ii].colorProgressInterval--;
                     }
+                    colorProgressDelayCounter = 0;
+                } else {
+                    colorProgressDelayCounter++;
                 }
-
-                //after QUICK_DELAY time, adjust double fast
-                float f = FADE_FACTOR;
-                if (cTime >= section[n]._button[b]->pressedTime + BUTTON_FADE_DELAY_RAPID)    
+            }
+            break;
+        case (2):
+            break;
+        case (1):
+            // if not yet held, initialize fading:
+            if (section[ii]._button[bb]->beingHeld == false) 
+            {
+                section[ii]._button[bb]->beingHeld = true;
+                section[ii].isOn = true;
+                if (section[ii].mode == 0)
                 {
-                    f = FADE_FACTOR_RAPID;
+                    section[ii].RGBW[3] = 1;
                 }
-                masterFadeIncrement(n, f);       //increment
-                break;
-        }
+            }
+
+            //after QUICK_DELAY time, adjust double fast
+            float f = FADE_FACTOR;
+            if (cTime >= section[ii]._button[bb]->pressedTime + BUTTON_FADE_DELAY_RAPID)    
+            {
+                f = FADE_FACTOR_RAPID;
+            }
+            masterFadeIncrement(ii, f);       //increment
+            break;
     }
 }
-
-
 
 
 

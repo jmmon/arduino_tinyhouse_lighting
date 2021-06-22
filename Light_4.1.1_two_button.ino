@@ -17,17 +17,15 @@ const uint16_t BUTTON_RES[2] = {488, 968};     // [0]bottom button returns ~3.3v
 const uint8_t BUTTON_RESISTANCE_TOLERANCE = 200; // +/-
 const uint8_t LOOP_DELAY_INTERVAL = 20; // refresh speed in ms          {for ms=1: factor=0.00001; amount=0.018}
 
-
 const uint8_t MAX_PRESS_COUNT = 6;
-const uint16_t BUTTON_RELEASE_TIMER = 250;      // time before release action is processed; time allowed between release and next press for multipresses
+const uint16_t BUTTON_RELEASE_TIMER = 250;      // time allowed between release and next press for multipresses
 const uint8_t BUTTON_FADE_DELAY = 230;          // minimum time the button must be held to start "held" action;
 
-const uint16_t BUTTON_FADE_DELAY_RAPID = 410;       //after this time, accellerate fading speed (double) so it doesn't take so long to fade to max/min
+const uint16_t BUTTON_FADE_DELAY_RAPID = 410;       // after this time, double fading speed so it adjusts quicker
 
-//brightness value = index of large lookup table above
 const float DEFAULT_BRIGHTNESS = 0.40; // 0-1 (percent) value for default brightness when turned on
-const float FADE_FACTOR = 0.0050;      //base fade adjustment; modified by section[].BRIGHTNESS_FACTOR
-const float FADE_FACTOR_RAPID = 0.01;    //after BUTTON_FADE_DELAY_RAPID ms, this is applied instead
+const float FADE_FACTOR = 0.0050;      // base fade adjustment; modified by section[].BRIGHTNESS_FACTOR
+const float FADE_FACTOR_RAPID = 0.01;    // after BUTTON_FADE_DELAY_RAPID ms, this is applied instead
 
 const float _MID = 0.878;
 const float _HIGH = 0.995;
@@ -51,13 +49,13 @@ const uint16_t COLOR_PROGRESS_SUDDEN_DELAY_INIT = 3000; //ms
 const uint8_t COLOR_PROGRESS_DELAY_COUNTER_INIT = 5;    // 5 * 20ms (main loop time) per adjustment
 
 uint16_t colorProgressDelayCounter = 0;
-uint32_t loopStartTime = 0;             // loop start time
+uint32_t loopStartTime = 0;
 
-//********************************************************************************************************************************************************
+//*************************************************************************************************************************************
 
 //                                              Structs
 
-//********************************************************************************************************************************************************
+//*************************************************************************************************************************************
 
 struct button_t
 {
@@ -95,17 +93,18 @@ struct button_t
 struct section_t
 {
     float RGBW[4];     // stores current RGBW color levels
+
     float lastRGBW[4]; // last color levels
 
     float masterBrightness;
     int8_t mode; // 0-4: WW, colors, colors+ww, (All, Nightlight)
-            //typical cycle is 0-1-2-0... modes 3 and 4 are hidden from the typical cycle.
+        // typical cycle is 0-1-2-0... modes 3 and 4 are hidden from the typical cycle.
 
     bool isOn;               // Are any levels > 0?
     float BRIGHTNESS_FACTOR; // affects [default brightness + fade speed], pref range [0-1]
     uint8_t DMXout;          // DMX OUT number (set of 4 channels) for this section
 
-    uint8_t colorDelayCounter; // slows the color cycle
+    float colorDelayCounter; // slows the color cycle, used to slow the "sudden" mode
     uint8_t colorState;        // next color state in the cycle
     bool colorProgress;        // while true, colors for this section will cycle
 
@@ -113,8 +112,8 @@ struct section_t
     uint16_t colorProgressInterval;     // adjust this to change colorProgress speed
 
     float nextRGB[3]; // next state of RGB for colorProgress cycle. Stores index of lookup table. Could be modified by colorFadeLevel to change the max level for the colorProgress.
-    float colorCycleFadeLevel;
-    int8_t colorCycleFadeDir;
+    float colorCycleFadeLevel;  //not used?
+    int8_t colorCycleFadeDir;   //not used?
 
     uint8_t PIN;
     button_t *_button[2];
@@ -126,7 +125,7 @@ struct section_t
         {0., 0., 0., 0.}, 
         1., 0, 
         false, 0.8, 4, 
-        0, 0, false, 
+        0., 0, false, 
         0, 0, 
         {0., 0., 0.}, 
         1, 1, 
@@ -140,7 +139,7 @@ struct section_t
         {0., 0., 0., 0.}, 
         1., 0, 
         false, 1, 3, 
-        0, 0, false, 
+        0., 0, false, 
         0, 0, 
         {0, 0, 0}, 
         1, 1, 
@@ -154,7 +153,7 @@ struct section_t
         {0., 0., 0., 0.}, 
         1., 0, 
         false, 0.9, 2, 
-        0, 0, false, 
+        0., 0, false, 
         0, 0, 
         {0, 0, 0}, 
         1, 1, 
@@ -168,7 +167,7 @@ struct section_t
         {0., 0., 0., 0.}, 
         1., 0, 
         false, 1.0, 1, 
-        0, 0, false, 
+        0., 0, false, 
         0, 0, 
         {0, 0, 0}, 
         1, 1, 
@@ -185,6 +184,13 @@ struct section_t
 
 void setup()
 {
+    for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++)
+    {
+        pinMode(section[i].PIN, INPUT);
+    }
+    randomSeed(analogRead(0)); //get random seed; used to start colorProgress state at a random color
+    loopStartTime = millis();
+
     if (DEBUG == true)
     {
         Serial.begin(9600); Serial.println(VERSION);
@@ -198,13 +204,6 @@ void setup()
             DmxSimple.write(i, 0);
         }
     }
-    
-    randomSeed(analogRead(0)); //get random seed; used to start colorProgress state at a random color
-    for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++)
-    {
-        pinMode(section[i].PIN, INPUT);
-    }
-    loopStartTime = millis();
 }
 
 
@@ -237,40 +236,36 @@ void loop()
         for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) 
         {
             uint16_t buttonStatus = analogRead(section[i].PIN);
-            if (buttonStatus <= 256) // if no button is pressed:
+            if (buttonStatus <= 256) // if no button is pressed check for Releases:
             {
-                // REGISTER RELEASES:
                 for (uint8_t b = 0; b < 2; b++) 
                 {
-                    // check if button[i] was pressed on the last loop by checking for non-zero pressedTime
+                    // check if button[i] was just released
                     if (section[i]._button[b]->pressedTime > 0) 
                     {
-                        // if so, start the releaseTimer
-                        // and reset pressedTime so the next press is detected as a new press rather than a held press.
-                        section[i]._button[b]->releaseTimer = currentTime + BUTTON_RELEASE_TIMER;
-                        section[i]._button[b]->pressedTime = 0;
+                        section[i]._button[b]->pressedTime = 0; // so the next press is detected as a new press rather than a held press
+                        section[i]._button[b]->releaseTimer = currentTime + BUTTON_RELEASE_TIMER; // start the releaseTimer
                     }
-                    else // else button[i] is already "RELEASED":
+                    else if (currentTime >= section[i]._button[b]->releaseTimer)
+                    // in case user is attempting a double or triple press wait for releaseTimer before commencing "release actions"
                     {
-                        // wait for releaseTimer before commencing "release actions," in case user is attempting a double or triple press.
-                        if (currentTime >= section[i]._button[b]->releaseTimer) 
+                        if (section[i]._button[b]->beingHeld == true) 
                         {
-                            if (section[i]._button[b]->beingHeld == true) 
+                            //mark as not held in case it was
+                            section[i]._button[b]->beingHeld = false;
+                        }
+                        else    //if button is not held commence Release action
+                        {
+                            if (section[i]._button[b]->pressedCount > 0)
                             {
-                                //mark as not held in case it was
-                                section[i]._button[b]->beingHeld = false;
-                            }
-                            else    //if button is not held commence Release action
-                            {
-                                if (section[i]._button[b]->pressedCount > 0)
+                                if (section[i]._button[b]->pressedCount > MAX_PRESS_COUNT)
                                 {
-                                    if (section[i]._button[b]->pressedCount > MAX_PRESS_COUNT)
-                                    {
-                                        section[i]._button[b]->pressedCount = MAX_PRESS_COUNT;
-                                    }
+                                    section[i]._button[b]->pressedCount = MAX_PRESS_COUNT;
+                                }
 
-                                    if (b == 1) //top button action
-                                    {
+                                switch (b)
+                                {
+                                    case (1): // top button action
                                         switch(section[i]._button[b]->pressedCount)
                                         {
                                             case (3):
@@ -283,9 +278,9 @@ void loop()
                                                 topAction1p(i);
                                                 break;
                                         }
-                                    }
-                                    else // bottom button action
-                                    {
+                                        break;
+
+                                    case (0): // bottom button action
                                         switch (section[i]._button[b]->pressedCount)
                                         {
                                             case (3):
@@ -298,15 +293,15 @@ void loop()
                                                 botAction1p(i);
                                                 break;
                                         }
-                                    }
-                                    updateLights(i);
+                                        break;
                                 }
+                                updateLights(i);
                             }
-                            // after RELEASE ACTIONS:
-                            section[i]._button[b]->pressedCount = 0; 
-                        } // END RELEASE ACTIONS (button press)
-                    }
-                }
+                        }
+                        // after RELEASE ACTIONS:
+                        section[i]._button[b]->pressedCount = 0; 
+                    } // release timer
+                } // for each button
             }
             else // else buttonStatus > 255: register press / do "held button" actions
             {
@@ -315,15 +310,48 @@ void loop()
                     heldActionsDEBUG(i, buttonStatus);
                 }
 
-                if (buttonStatus >= (BUTTON_RES[1] - BUTTON_RESISTANCE_TOLERANCE) && 
-                    buttonStatus <= (BUTTON_RES[1] + BUTTON_RESISTANCE_TOLERANCE)) 
+                uint8_t b = 1;
+                if (buttonStatus >= (BUTTON_RES[b] - BUTTON_RESISTANCE_TOLERANCE) && 
+                    buttonStatus <= (BUTTON_RES[b] + BUTTON_RESISTANCE_TOLERANCE)) 
                 {
-                    heldTopBtnActions(i, currentTime);
+                    
+                    if (DEBUG == true)
+                    {
+                        btnTopHeldActionsDEBUG(i, b);
+                    }
+
+                    // if NEW button press
+                    if (section[i]._button[b]->pressedTime == 0) 
+                    {
+                        btnRegisterPress(i, b, currentTime);
+                    }
+                    else if (currentTime >= (section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY)) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
+                    {
+                        btnTopHeld(i, b, currentTime);
+                    }
                 }
-                else if (buttonStatus >= (BUTTON_RES[0] - BUTTON_RESISTANCE_TOLERANCE) && 
-                    buttonStatus <= (BUTTON_RES[0] + BUTTON_RESISTANCE_TOLERANCE))
+                else 
                 {
-                    heldBotBtnActions(i, currentTime);
+                    b = 0;
+                    if (buttonStatus >= (BUTTON_RES[b] - BUTTON_RESISTANCE_TOLERANCE) && 
+                        buttonStatus <= (BUTTON_RES[b] + BUTTON_RESISTANCE_TOLERANCE))
+                    {
+                        
+                        if (DEBUG == true)
+                        {
+                            btnBotHeldActionsDEBUG(i, b);
+                        }
+
+                        // if NEW button press
+                        if (section[i]._button[b]->pressedTime == 0) 
+                        {
+                            btnRegisterPress(i, b, currentTime);
+                        }
+                        else if (currentTime >= (section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY)) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
+                        {
+                            btnBotHeld(i, b, currentTime);
+                        }
+                    }
                 }
             }
         } // end {check each section} loop

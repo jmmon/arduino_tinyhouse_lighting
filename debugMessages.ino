@@ -41,13 +41,13 @@ void botAction2pDEBUG(uint8_t nn) {
     }
 }
 
-void heldBotBtnActionsDEBUG(uint8_t nn, uint8_t bb) {
+void btnBotHeldActionsDEBUG(uint8_t nn, uint8_t bb) {
     Serial.print(F("Fade Down"));
     Serial.print(section[nn]._button[bb]->pressedCount);
     Serial.println(F(" presses"));
 }
 
-void heldTopBtnActionsDEBUG(uint8_t nn, uint8_t bb) {
+void btnTopHeldActionsDEBUG(uint8_t nn, uint8_t bb) {
     Serial.print(F("Fade Up: "));
     Serial.print(section[nn]._button[bb]->pressedCount);
     Serial.println(F(" presses"));

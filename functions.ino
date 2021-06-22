@@ -1,3 +1,9 @@
+void btnRegisterPress(uint8_t ii, uint8_t bb, uint32_t cTime) {
+    section[ii]._button[bb]->pressedTime = cTime; // save the time to detect multipresses
+    section[ii]._button[bb]->pressedCount++;      // add one press to its counter
+}
+
+
 void switchMode(uint8_t nn, uint32_t ccTime) {
     switch (section[nn].mode)
     {
@@ -106,23 +112,30 @@ void masterFadeDecrement(uint8_t i, float f)
 
 void progressColorSudden(uint8_t ii)
 {
-    section[ii].colorState += 1;
-    if (section[ii].colorState >= 12)
-    {
-        section[ii].colorState = 0;
+    if (section[ii].colorDelayCounter < 1) {
+        section[ii].colorDelayCounter += (2 * COLOR_PROGRESS_FADE_AMOUNT);
+    } else {
+        section[ii].colorDelayCounter = 0;
+
+        section[ii].colorState += 1;
+        if (section[ii].colorState >= 12)
+        {
+            section[ii].colorState = 0;
+        }
+
+        if (DEBUG == true)
+        {
+            Serial.print(F("color progress state: ")); Serial.println(section[ii].colorState);
+        }
+
+        //set new light color
+        section[ii].RGBW[0] = RED_LIST[section[ii].colorState];
+        section[ii].RGBW[1] = GREEN_LIST[section[ii].colorState];
+        section[ii].RGBW[2] = BLUE_LIST[section[ii].colorState];
+
+        updateLights(ii);
     }
-
-    if (DEBUG == true)
-    {
-        Serial.print(F("color progress state: ")); Serial.println(section[ii].colorState);
-    }
-
-    //set new light color
-    section[ii].RGBW[0] = RED_LIST[section[ii].colorState];
-    section[ii].RGBW[1] = GREEN_LIST[section[ii].colorState];
-    section[ii].RGBW[2] = BLUE_LIST[section[ii].colorState];
-
-    updateLights(ii);
+    
 }
 
 
