@@ -12,72 +12,21 @@ const uint8_t   KITCHEN_BUTTON_PIN  =   A3,
 
                         DMX_PIN     =   3;
 
-//light values lookup table, built on an S curve, to make LED dimming feel linear. 1024 stages.
-//Storing in PROGMEM allows for such a large array (1023 values). Without PROGMEM, an array of 512 values pushed the limit of dynamic memory but now it's ~51%.
-const uint8_t   WIDTH   = 32,
-                HEIGHT  = 32;
-const uint16_t TABLE_SIZE = 1023;
-const uint8_t DIMMER_LOOKUP_TABLE[HEIGHT][WIDTH] PROGMEM = {
-{ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, },
-{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, },
-{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, },
-{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, },
-
-{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, },
-{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, },
-{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, },
-{ 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, },
-
-{ 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, },
-{ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, },
-{ 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, },
-{ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, },
-
-{ 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, },
-{ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, },
-{ 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, },
-{ 13, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, },
-
-{ 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 19, 19, 19, 19, 19, },
-{ 19, 19, 19, 19, 19, 20, 20, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 21, 21, 21, 21, 21, 21, 22, 22, 22, 22, 22, 22, 22, 22, 23, },
-{ 23, 23, 23, 23, 23, 23, 23, 24, 24, 24, 24, 24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 25, 26, 26, 26, 26, 26, 26, 26, 26, 27, 27, },
-{ 27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 29, 29, 29, 29, 29, 29, 30, 30, 30, 30, 30, 30, 31, 31, 31, 31, 31, 31, 32, 32, 32, },
-
-{ 32, 32, 32, 33, 33, 33, 33, 33, 33, 34, 34, 34, 34, 34, 35, 35, 35, 35, 35, 36, 36, 36, 36, 36, 36, 37, 37, 37, 37, 37, 38, 38, },
-{ 38, 38, 39, 39, 39, 39, 39, 40, 40, 40, 40, 40, 41, 41, 41, 41, 42, 42, 42, 42, 42, 43, 43, 43, 43, 44, 44, 44, 44, 45, 45, 45, },
-{ 45, 46, 46, 46, 46, 47, 47, 47, 47, 48, 48, 48, 48, 49, 49, 49, 49, 50, 50, 50, 50, 51, 51, 51, 52, 52, 52, 52, 53, 53, 53, 54, },
-{ 54, 54, 54, 55, 55, 55, 56, 56, 56, 57, 57, 57, 57, 58, 58, 58, 59, 59, 59, 60, 60, 60, 61, 61, 61, 62, 62, 62, 63, 63, 63, 64, },
-
-{ 64, 64, 65, 65, 65, 66, 66, 67, 67, 67, 68, 68, 68, 69, 69, 69, 70, 70, 71, 71, 71, 72, 72, 73, 73, 73, 74, 74, 75, 75, 75, 76, },
-{ 76, 77, 77, 77, 78, 78, 79, 79, 80, 80, 80, 81, 81, 82, 82, 83, 83, 84, 84, 84, 85, 85, 86, 86, 87, 87, 88, 88, 89, 89, 90, 90, },
-{ 91, 91, 92, 92, 93, 93, 94, 94, 95, 95, 96, 96, 97, 97, 98, 98, 99, 99, 100, 100, 101, 102, 102, 103, 103, 104, 104, 105, 105, 106, 107, 107, },
-{ 108, 108, 109, 110, 110, 111, 111, 112, 113, 113, 114, 114, 115, 116, 116, 117, 118, 118, 119, 119, 120, 121, 121, 122, 123, 123, 124, 125, 125, 126, 127, 127, },
-
-{ 128, 129, 130, 130, 131, 132, 132, 133, 134, 135, 135, 136, 137, 138, 138, 139, 140, 141, 141, 142, 143, 144, 144, 145, 146, 147, 148, 148, 149, 150, 151, 152, },
-{ 152, 153, 154, 155, 156, 157, 157, 158, 159, 160, 161, 162, 163, 164, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 175, 176, 177, 178, 179, 180, },
-{ 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 208, 209, 210, 211, 212, 213, 214, },
-{ 216, 217, 218, 219, 220, 222, 223, 224, 225, 226, 228, 229, 230, 231, 233, 234, 235, 236, 238, 239, 240, 242, 243, 244, 246, 247, 248, 250, 251, 252, 254, 255, },
-};
-
-
 const uint8_t CHANNELS = 64;
 const uint16_t BUTTON_RES[2] = {488, 968};     // [0]bottom button returns ~3.3v    // [1]top button returns ~5v
 const uint8_t BUTTON_RESISTANCE_TOLERANCE = 200; // +/-
 const uint8_t LOOP_DELAY_INTERVAL = 20; // refresh speed in ms          {for ms=1: factor=0.00001; amount=0.018}
 
-
 const uint8_t MAX_PRESS_COUNT = 6;
-const uint16_t BUTTON_RELEASE_TIMER = 250;      // time before release action is processed; time allowed between release and next press for multipresses
+const uint16_t BUTTON_RELEASE_TIMER = 250;      // time allowed between release and next press for multipresses
 const uint8_t BUTTON_FADE_DELAY = 230;          // minimum time the button must be held to start "held" action;
 
-const uint16_t BUTTON_FADE_DELAY_RAPID = 410;       //after this time, accellerate fading speed (double) so it doesn't take so long to fade to max/min
+const uint16_t BUTTON_FADE_DELAY_RAPID = 410;       // after this time, double fading speed so it adjusts quicker
 
-//brightness value = index of large lookup table above
 const float DEFAULT_BRIGHTNESS = 0.40; // 0-1 (percent) value for default brightness when turned on
-const float FADE_FACTOR = 0.0050;      //base fade adjustment; modified by section[].BRIGHTNESS_FACTOR
-const float FADE_FACTOR_RAPID = 0.01;    //after BUTTON_FADE_DELAY_RAPID ms, this is applied instead
+const float FADE_FACTOR = 0.0050;      // base fade adjustment; modified by section[].BRIGHTNESS_FACTOR
+const float FADE_FACTOR_RAPID = 0.01;    // after BUTTON_FADE_DELAY_RAPID ms, this is applied instead
 
-uint32_t loopStartTime = 0;             // loop start time
 const float _MID = 0.878;
 const float _HIGH = 0.995;
 const float _LOW = 0.6;
@@ -97,40 +46,40 @@ const uint8_t LIGHTSECTION_COUNT = 4;
 const uint16_t COLOR_PROGRESS_SMOOTH_DELAY_INIT = 20; //ms
 const uint16_t COLOR_PROGRESS_SUDDEN_DELAY_INIT = 3000; //ms
 
-uint16_t colorProgressDelayCounter = 0;
 const uint8_t COLOR_PROGRESS_DELAY_COUNTER_INIT = 5;    // 5 * 20ms (main loop time) per adjustment
 
-//********************************************************************************************************************************************************
+uint16_t colorProgressDelayCounter = 0;
+uint32_t loopStartTime = 0;
+
+//*************************************************************************************************************************************
 
 //                                              Structs
 
-//********************************************************************************************************************************************************
+//*************************************************************************************************************************************
 
 struct button_t
 {
-    uint32_t releaseTimer; //when was this button released?
+    uint32_t releaseTime; //when was this button released?
     uint32_t pressedTime;  //when was this button pressed?
-    uint16_t pressedDuration;  // time from press to release
-    uint8_t pressedCount;  //If button is pressed before releaseTimer ends, add one to count
+    uint8_t pressedCount;  //If button is pressed before releaseTime ends, add one to count
     bool beingHeld;        //is the button being held? (for longer than BUTTON_FADE_DELAY
 
 } button[] = {
-    // two per section:
     // Inside underloft
-    {0, 0, 0, 0, false}, //entry button up         
-    {0, 0, 0, 0, false}, //entry button down
+    {0, 0, 0, false}, //entry button up         
+    {0, 0, 0, false}, //entry button down
 
     // Outside (Porch)
-    {0, 0, 0, 0, false}, //entry2 button up
-    {0, 0, 0, 0, false}, //entry2 button down
+    {0, 0, 0, false}, //entry2 button up
+    {0, 0, 0, false}, //entry2 button down
 
     // Kitchen underloft
-    {0, 0, 0, 0, false}, //kitchen left wall
-    {0, 0, 0, 0, false}, //kitchen
+    {0, 0, 0, false}, //kitchen left wall
+    {0, 0, 0, false}, //kitchen
 
     // Bathroom (back wall right nook)
-    {0, 0, 0, 0, false}, //bath
-    {0, 0, 0, 0, false},
+    {0, 0, 0, false}, //bath
+    {0, 0, 0, false},
 
     //Back wall button
     // {0, 0, 0, 0, false}, //Back wall (left) / Greenhouse?
@@ -143,16 +92,18 @@ struct button_t
 struct section_t
 {
     float RGBW[4];     // stores current RGBW color levels
+
     float lastRGBW[4]; // last color levels
+
     float masterBrightness;
     int8_t mode; // 0-4: WW, colors, colors+ww, (All, Nightlight)
-    uint8_t lastMode;         // not used
-    //typical cycle is 0-1-2-0... modes 3 and 4 are hidden from the typical cycle.
+        // typical cycle is 0-1-2-0... modes 3 and 4 are hidden from the typical cycle.
+
     bool isOn;               // Are any levels > 0?
     float BRIGHTNESS_FACTOR; // affects [default brightness + fade speed], pref range [0-1]
-    uint8_t DMXout;          // DMX OUT number (set of 4 channels) this section controls
-    // colorProgress variables for this section
-    uint8_t colorDelayCounter; // slows the color cycle
+    uint8_t DMXout;          // DMX OUT number (set of 4 channels) for this section
+
+    float colorDelayCounter; // slows the color cycle, used to slow the "sudden" mode
     uint8_t colorState;        // next color state in the cycle
     bool colorProgress;        // while true, colors for this section will cycle
 
@@ -160,24 +111,73 @@ struct section_t
     uint16_t colorProgressInterval;     // adjust this to change colorProgress speed
 
     float nextRGB[3]; // next state of RGB for colorProgress cycle. Stores index of lookup table. Could be modified by colorFadeLevel to change the max level for the colorProgress.
-    float colorCycleFadeLevel;
-    int8_t colorCycleFadeDir;
+    float colorCycleFadeLevel;  //not used?
+    int8_t colorCycleFadeDir;   //not used?
 
     uint8_t PIN;
+    uint16_t lastStatus;
     button_t *_button[2];
 
 } section[] = {
     //  ID 0    Living Room Lights
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 0.8, 4, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, ENTRY_BUTTON_PIN, {&button[0], &button[1]}},
+    {
+        {0., 0., 0., 0.}, 
+        {0., 0., 0., 0.}, 
+        1., 0, 
+        false, 0.8, 4, 
+        0., 0, false, 
+        0, 0, 
+        {0., 0., 0.}, 
+        1, 1, 
+        ENTRY_BUTTON_PIN, 
+        0,
+        {&button[0], &button[1]}
+    },
 
     //  ID 1    Kitchen Lights
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 1, 3, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, KITCHEN_BUTTON_PIN, {&button[4], &button[5]}},
+    {
+        {0., 0., 0., 0.}, 
+        {0., 0., 0., 0.}, 
+        1., 0, 
+        false, 1, 3, 
+        0., 0, false, 
+        0, 0, 
+        {0, 0, 0}, 
+        1, 1, 
+        KITCHEN_BUTTON_PIN, 
+        0,
+        {&button[4], &button[5]}
+    },
 
     //  ID 2   Porch Lights
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 0.9, 2, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, ENTRY2_BUTTON_PIN, {&button[2], &button[3]}},
+    {
+        {0., 0., 0., 0.}, 
+        {0., 0., 0., 0.}, 
+        1., 0, 
+        false, 0.9, 2, 
+        0., 0, false, 
+        0, 0, 
+        {0, 0, 0}, 
+        1, 1, 
+        ENTRY2_BUTTON_PIN, 
+        0,
+        {&button[2], &button[3]}
+    },
 
     //  ID 3   bath
-    {{0., 0., 0., 0.}, {0., 0., 0., 0.}, 1., 0, 0, false, 1.0, 1, 0, 0, false, 0, 0, {0, 0, 0}, 1, 1, BATH_BUTTON_PIN, {&button[6], &button[7]}},
+    {
+        {0., 0., 0., 0.}, 
+        {0., 0., 0., 0.}, 
+        1., 0, 
+        false, 1.0, 1, 
+        0., 0, false, 
+        0, 0, 
+        {0, 0, 0}, 
+        1, 1, 
+        BATH_BUTTON_PIN, 
+        0,
+        {&button[6], &button[7]}
+    },
 
     //  ID     Overhead Bedroom
     //  ID     Overhead Main
@@ -185,206 +185,19 @@ struct section_t
     //  ID     Greenhouse Lights
 };
 
-//******************************************************************************************************************************************************** 
 
-//                                          End Variables
-
-//******************************************************************************************************************************************************** 
-
-
-
-/*
-
-
-        Break up each different action into different functions? ideas:
-
-fade increase, (done)
-fade decrease, (done)
-
-top button press, 
-bottom button press, 
-
-or even top button one press, 
-top button two press, 
-top button three press, 
-etc, 
-
-top button hold, 
-top button double hold, 
-top button triple hold, 
-bottom...etc, 
-
-
-
-progressSmooth, 
-progressSudden, 
-
-Switch mode up, 
-switch mode down, 
-
-could move all the debug sections to thier own function on its own page?, 
-
-
-*/
-
-
-
-
-void updateLights(uint8_t i)
-{                            //updates a specific light section
-    uint8_t brightnessValue; //index for brightness lookup table
+void setup()
+{
+    for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++)
+    {
+        pinMode(section[i].PIN, INPUT);
+    }
+    randomSeed(analogRead(0)); //get random seed; used to start colorProgress state at a random color
+    loopStartTime = millis();
 
     if (DEBUG == true)
-    { // DEBUG }}
-        uint8_t height = (uint16_t(section[i].RGBW[3] * section[i].masterBrightness * TABLE_SIZE) / HEIGHT);
-        uint8_t width = (uint16_t(section[i].RGBW[3] * section[i].masterBrightness * TABLE_SIZE) % WIDTH);
-        memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); //  looks up brighness from table and saves as uint8_t brightness ( sizeof(brightness) resolves to 1 [byte of data])
-        if (section[i].RGBW[3] > 0 && section[i].masterBrightness > 0 && brightnessValue == 0)
-        {
-            brightnessValue = 1;
-        }
-
-        Serial.print(F("width:")); Serial.print(width);
-        Serial.print(F(", height:")); Serial.print(height);
-        Serial.print(F(" lvl:")); Serial.print(brightnessValue);
-        Serial.print(F(" W: ")); Serial.print(section[i].RGBW[3]);
-        Serial.print(F(" R: ")); Serial.print(section[i].RGBW[0]);
-        Serial.print(F(" G: ")); Serial.print(section[i].RGBW[1]);
-        Serial.print(F(" B: ")); Serial.print(section[i].RGBW[2]);
-        Serial.print(F(" Master brightness: ")); Serial.print(section[i].masterBrightness);
-        Serial.print(F(" t:")); Serial.println(millis());
-    }
-    else
     {
-        for (uint8_t k = 0; k < 4; k++)
-        {
-            uint8_t height = (uint16_t(section[i].RGBW[k] * section[i].masterBrightness * TABLE_SIZE) / HEIGHT);
-            uint8_t width = (uint16_t(section[i].RGBW[k] * section[i].masterBrightness * TABLE_SIZE) % WIDTH);
-            // looks up brighness from table and saves as uint8_t brightness ( sizeof(brightness) resolves to 1 [byte of data])
-            memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); 
-
-            if (section[i].RGBW[k] > 0 && section[i].masterBrightness > 0 && brightnessValue == 0)
-            {
-                brightnessValue = 1;
-            }
-                
-            DmxSimple.write(section[i].DMXout * 8 - 8 + (k * 2 + 1), brightnessValue); //main underloft lights
-            DmxSimple.write(section[i].DMXout * 8 - 8 + (k * 2 + 1), brightnessValue); //main underloft lights
-            section[i].lastRGBW[k] = section[i].RGBW[k];
-        }
-    }
-    if (section[i].RGBW[3] <= 0 && section[i].RGBW[0] <= 0 && section[i].RGBW[1] <= 0 && section[i].RGBW[2] <= 0)
-    {
-        section[i].isOn = false;
-        section[i].masterBrightness = 0;
-        if (DEBUG == true)
-        {
-            Serial.print(F("MasterBrightness: ")); Serial.println(section[i].masterBrightness);
-            Serial.print(F("IsOn:")); Serial.println(section[i].isOn);
-        }
-    }
-}
-
-void masterFadeIncrement(uint8_t i, float f)
-{
-    if (section[i].masterBrightness < (1 - section[i].BRIGHTNESS_FACTOR * f))
-    {
-        section[i].masterBrightness += section[i].BRIGHTNESS_FACTOR * f;
-    }
-    else
-    {
-        section[i].masterBrightness = 1; // max
-    }
-}
-
-void masterFadeDecrement(uint8_t i, float f)
-{
-    if (section[i].masterBrightness > (section[i].BRIGHTNESS_FACTOR * f))
-    {
-        section[i].masterBrightness -= section[i].BRIGHTNESS_FACTOR * f;
-    }
-    else
-    {
-        section[i].masterBrightness = 0; // min
-    }
-}
-
-void progressColor(uint8_t i)
-{
-    if (section[i].mode == 2) 
-    {
-        //sudden color changes
-
-        section[i].colorState += 1;
-        if (section[i].colorState == 12)
-            section[i].colorState = 0;
-        if (DEBUG == true)
-        {
-            Serial.print(F("color progress state: ")); Serial.println(section[i].colorState);
-        }
-
-        //set new light color
-        section[i].RGBW[0] = RED_LIST[section[i].colorState];
-        section[i].RGBW[1] = GREEN_LIST[section[i].colorState];
-        section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
-
-    } 
-    else if (section[i].mode == 1) 
-    {
-        //smooth color changes
-
-        section[i].nextRGB[0] = RED_LIST[section[i].colorState]; // target levels for the current state
-        section[i].nextRGB[1] = GREEN_LIST[section[i].colorState];
-        section[i].nextRGB[2] = BLUE_LIST[section[i].colorState];
-
-        if ((section[i].nextRGB[0] == section[i].RGBW[0]) && (section[i].nextRGB[1] == section[i].RGBW[1]) && (section[i].nextRGB[2] == section[i].RGBW[2])) // Go to next state
-        {
-            section[i].colorState += 1;
-            if (section[i].colorState == 12)
-            {
-                section[i].colorState = 0;
-            }
-                
-            if (DEBUG == true)
-            {
-                Serial.print(F("color progress state: ")); Serial.println(section[i].colorState);
-            }
-        }
-        else // else change colors to get closer to current state
-        {
-            for (uint8_t k = 0; k < 3; k++) //rgb
-            {
-                if (section[i].RGBW[k] < section[i].nextRGB[k])
-                {
-                    section[i].RGBW[k] += COLOR_PROGRESS_FADE_AMOUNT;
-                    if (section[i].RGBW[k] >= section[i].nextRGB[k])
-                    {
-                        section[i].RGBW[k] = section[i].nextRGB[k];
-                    }
-                        
-                }
-                else if (section[i].RGBW[k] > section[i].nextRGB[k])
-                {
-                    section[i].RGBW[k] -= COLOR_PROGRESS_FADE_AMOUNT;
-                    if (section[i].RGBW[k] <= section[i].nextRGB[k])
-                    {
-                        section[i].RGBW[k] = section[i].nextRGB[k];
-                    }
-                        
-                }
-            }
-        }
-    }
-    updateLights(i);
-}
-
-
-void setup() //****************************************************************************************************************************** SETUP
-{
-    if (DEBUG == true)
-    { // DEBUG }}
-        Serial.begin(9600);
-        Serial.println(VERSION);
+        Serial.begin(9600); Serial.println(VERSION);
     }
     else
     {
@@ -395,20 +208,12 @@ void setup() //*****************************************************************
             DmxSimple.write(i, 0);
         }
     }
-    
-    randomSeed(analogRead(0)); //get random seed; used to start colorProgress state at a random color
-    for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++)
-    {
-        pinMode(section[i].PIN, INPUT);
-    }
-    loopStartTime = millis();
 }
 
-void loop() //********************************************************************************************************************************* LOOP
+
+void loop()
 {
     uint32_t currentTime = millis();
-
-
     for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) 
     {
         if (section[i].colorProgress == true) 
@@ -416,551 +221,153 @@ void loop() //******************************************************************
             if ((currentTime - section[i].colorProgressTimerStart) >= section[i].colorProgressInterval) 
             {
                 section[i].colorProgressTimerStart += section[i].colorProgressInterval;
-                progressColor(i);
+                if (section[i].mode == 2) // sudden color changes
+                {
+                    progressColorSudden(i);
+                }
+                else if (section[i].mode == 1) 
+                {
+                    progressColorSmooth(i);
+                }
             }
         }
     }
-
 
     if ((currentTime - loopStartTime) >= LOOP_DELAY_INTERVAL) // 20ms loop
     {
         loopStartTime += LOOP_DELAY_INTERVAL; // set time for next timer
 
-        for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) // cycle through each section
+        for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) 
         {
-            uint16_t buttonStatus = analogRead(section[i].PIN); // read the button pin to check if any buttons are pressed
-            
-            // REGISTER RELEASES:
+            uint16_t buttonStatus = analogRead(section[i].PIN);
+
             if (buttonStatus <= 256) // if no button is pressed:
             {
                 for (uint8_t b = 0; b < 2; b++) 
                 {
-                    // check if button[i] was pressed on the last loop by checking for non-zero pressedTime
+                    // check if button[b] was just released
                     if (section[i]._button[b]->pressedTime > 0) 
                     {
-                        // if so, start the releaseTimer
-                        // and reset pressedTime so the next press is detected as a new press rather than a held press.
-                        section[i]._button[b]->releaseTimer = currentTime + BUTTON_RELEASE_TIMER; 
-                        section[i]._button[b]->pressedTime = 0;                                   
-                    }
-                    else // else if pressedTime == 0 then button[i] is already "RELEASED":
+                        registerRelease(i, b, currentTime);
+                    } 
+                    else if (section[i]._button[b]->releaseTime != 0 && 
+                        currentTime >= section[i]._button[b]->releaseTime + BUTTON_RELEASE_TIMER)
+                    // in case user is attempting a double or triple press wait for releaseTime before commencing "release actions"
                     {
-                        // wait for releaseTimer before commencing "release actions," in case user is attempting a double or triple press.
-                        if (currentTime >= section[i]._button[b]->releaseTimer) 
+                        section[i]._button[b]->releaseTime = 0;
+                        if (section[i]._button[b]->pressedCount > 0)
                         {
-                            // this is where we process the "button was pressed x times" action
-                            if (section[i]._button[b]->beingHeld == true) //mark as not held in case it was
+                            if (section[i]._button[b]->beingHeld == true) 
                             {
+                                //if was held, set to false and reset pressedCount to prevent release actions from happening
                                 section[i]._button[b]->beingHeld = false;
                             }
-                            else    //if button is not held commence Release action
+                            else
                             {
-                                uint8_t brightness = 0;
-                                if (section[i]._button[b]->pressedCount > 0)
+                                if (section[i]._button[b]->pressedCount > MAX_PRESS_COUNT)
                                 {
-                                    if (section[i]._button[b]->pressedCount > MAX_PRESS_COUNT)
-                                    {
-                                        section[i]._button[b]->pressedCount = MAX_PRESS_COUNT;
-                                    }
-                                    
-                                    switch (section[i]._button[b]->pressedCount) // handle button presses (releases actually)
-                                    {
-                                        case (3):       // 3 presses
-                                            if (b == 1) // top button  action
-                                            {
-                                                //if not held past the fade point, we want max brightness. Otherwise, all we want is fade speed adjust, which happens way below.
-                                                if (currentTime < section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY) {
+                                    section[i]._button[b]->pressedCount = MAX_PRESS_COUNT;
+                                }
 
-    //NEED ANOTHER WAY TO CHECK THIS ABOVE, ALWAYS FALSE so NEVER LETS MAX BRIGHTNESS MODE ENGAGE
+                                switch (b)
+                                {
+                                    case (1): // top button action
+                                        switch(section[i]._button[b]->pressedCount)
+                                        {
+                                            case (3):
+                                                topAction3p(i, currentTime, b);
+                                                break;
+                                            case (2):
+                                                topAction2p(i, currentTime);
+                                                break;
+                                            case (1):
+                                                topAction1p(i);
+                                                break;
+                                            default:
+                                                break;
+                                        }
+                                        break;
 
-                                                    //  TRIPLE PRESS TOP: MAX BRIGHTNESS
-                                                    if (DEBUG == true)
-                                                    {
-                                                        Serial.println(F(" TOP 3 "));
-                                                        Serial.println(F("Max Brightness {mode:3}"));
-                                                    }
-
-                                                    section[i].mode = 3; // set to mode 3
-
-                                                    for (uint8_t k = 0; k < 4; k++)
-                                                    {
-                                                        section[i].RGBW[k] = 1;
-                                                    }
-
-                                                    section[i].isOn = true;
-                                                    section[i].masterBrightness = 1;
-                                                }
-                                                
-                                            }
-                                            else // bottom button action
-                                            {
-                                                //if not held past the fade point, we want all off. Otherwise, all we want is fade speed adjust, which happens way below.
-                                                if (currentTime < section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY) {
-                                                    // TRIPLE PRESS BOTTOM from on: if lights are on, turn off all EXCEPT PORCH. (If porch isn't on, turn all lights off.)
-                                                    //                              if only PORCH is on, turn PORCH off.
-                                                    // if no light is on, disco mode.
-                                                    if (DEBUG == true)
-                                                    {
-                                                        Serial.println(F(" BOT 3 "));
-                                                    }
-
-                                                    // if (section[2].isOn == true) {  //if porch is on
-
-                                                    // } else {
-
-                                                    // }
-
-
-                                                    bool on = false;
-                                                    for (uint8_t k = 0; k < LIGHTSECTION_COUNT; k++) // check if any lights are on (except porch)
-                                                    {
-                                                        if (section[k].isOn = true && k != 2)
-                                                            on = true;
-                                                    }
-                                                    if (on == true) // excluding porch, if any are on, turn them off.
-                                                    {
-                                                        if (DEBUG == true)
-                                                        {
-                                                            Serial.println(F("Light(s) are on, turn them off (except porch light)"));
-                                                        }
-                                                        
-                                                        for (uint8_t k = 0; k < LIGHTSECTION_COUNT; k++) // turn off all but porch
-                                                        {
-                                                            if (section[k].isOn = true && k != 2) // if the light is on and it's not the porch light,
-                                                            {
-                                                                section[k].isOn = false; // if "on," set to "off"
-                                                                section[k].colorProgress = false;
-                                                                for (uint8_t z = 0; z < 4; z++)
-                                                                    section[k].RGBW[z] = 0; // and set values to 0 for each color for that light
-                                                                section[k].masterBrightness = 0;
-                                                            }
-                                                        }
-                                                    }
-                                                    else if (section[2].isOn == true) // else if porch is on:
-                                                    {
-                                                        if (DEBUG == true)
-                                                        {
-                                                            Serial.println(F("Only porch is on: turning off."));
-                                                        }
-
-                                                        section[2].isOn = false;
-                                                        section[2].colorProgress = false;
-                                                        for (uint8_t z = 0; z < 4; z++)
-                                                            section[2].RGBW[z] = 0; // and set values to 0 for each color for that light
-                                                        section[2].masterBrightness = 0;
-                                                    }
-                                                    else  // else no lights are on so do:
-                                                    {
-                                                        if (DEBUG == true)
-                                                        {
-                                                            Serial.println(F("Lights were off: disco mode!"));
-                                                        }
-
-                                                        // TODO: all is off, disco mode
-                                                    }
-                                                }
-
-                                                
-                                            }
-                                            break;
-
-
-                                        case (2):       // 2 presses
-                                            if (b == 1) // top button action 
-                                            {
-                                                // DOUBLE PRESS TOP: turn on if off; and switch to next mode.
-                                                // [white mode, color mode (cycle or no), white+color mode (white at 50% of color)] + extra hidden index 3:[all lights max, not included in cycle change, only for triple press]
-
-                                                if (DEBUG == true)
-                                                {
-                                                    Serial.println(F(" TOP 2 "));
-                                                }
-                                                
-                                                if (section[i].isOn == false)
-                                                {
-                                                    // change to next and turn on
-                                                    section[i].isOn = true;
-                                                }
-                                                
-                                                section[i].mode++;  // if was off, we want value of 1 from 0. If it was on, we increment the value
-                                                if (section[i].mode >= NUM_OF_MODES_CYCLE)
-                                                {
-                                                    section[i].mode = 0;
-                                                }
-                                                if (DEBUG == true)
-                                                {
-                                                    Serial.print(F("Now in mode: "));
-                                                    Serial.println(section[i].mode);
-                                                }
-
-                                                switch (section[i].mode) // turn on the mode:
-                                                {
-                                                    case (0): // white mode from RGB sudden
-                                                        if (section[i].colorProgress == true)
-                                                        { // turn off colorProgress
-                                                            section[i].colorProgress = false;
-                                                            for (uint8_t k = 0; k < 4; k++)
-                                                                section[i].RGBW[k] = 0;
-                                                        }
-
-                                                        section[i].RGBW[3] = 1;
-                                                        section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
-                                                        break;
-                                                    case (1): // RGB smooth from white
-                                                        // turn off other colors,
-                                                        // start colorProgress
-
-                                                        if (section[i].colorProgress == false)
-                                                        { //lastMode was not 2
-                                                            section[i].colorProgress = true;
-                                                            section[i].colorState = random(12); //get a random state to start at
-
-                                                            section[i].RGBW[3] = 0;
-                                                            // for (uint8_t k = 0; k < 4; k++)
-                                                            //         section[i].RGBW[k] = 0;
-                                                                //initialize a state
-                                                            section[i].RGBW[0] = RED_LIST[section[i].colorState];
-                                                            section[i].RGBW[1] = GREEN_LIST[section[i].colorState];
-                                                            section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
-                                                            updateLights(i);
-
-                                                            section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
-                                                            section[i].colorProgressTimerStart = currentTime;
-                                                            section[i].colorProgressInterval = COLOR_PROGRESS_SMOOTH_DELAY_INIT;
-                                                            //progressColor(i);
-                                                        }
-
-                                                        break;
-                                                    case (2): // RGB sudden from RGB smooth
-                                                        // start colorProgress
-
-                                                        if (section[i].colorProgress == false)
-                                                        {
-                                                            section[i].colorProgress = true;
-                                                            section[i].colorState = random(12); // get a random state to start at
-
-                                                            section[i].RGBW[3] = 0;
-                                                            // for (uint8_t k = 0; k < 4; k++)
-                                                            //         section[i].RGBW[k] = 0;
-                                                                //initialize a state
-                                                            section[i].RGBW[0] = RED_LIST[section[i].colorState];
-                                                            section[i].RGBW[1] = GREEN_LIST[section[i].colorState];
-                                                            section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
-                                                            updateLights(i);
-                                                            
-                                                            section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
-                                                            //progressColor(i);
-                                                        }
-                                                        section[i].colorProgressTimerStart = currentTime;
-                                                        section[i].colorProgressInterval = COLOR_PROGRESS_SUDDEN_DELAY_INIT;
-                                                        break;
-                                                }
-                                                
-                                                
-                                            }
-                                            else // bottom double press action
-                                            {
-                                                // DOUBLE PRESS BOT: from on: reduce mode by 1
-                                                // DOUBLE PRESS BOT: from off: do nothing
-                                                if (DEBUG == true)
-                                                {
-                                                    Serial.println(F(" BOT 2 "));
-                                                }
-                                                if (section[i].isOn == true)
-                                                {
-                                                    section[i].mode--;
-                                                    if (section[i].mode < 0)
-                                                    {
-                                                        section[i].mode = NUM_OF_MODES_CYCLE - 1;
-                                                    }
-
-                                                    if (DEBUG == true)
-                                                    {
-                                                        Serial.print(F("Now in mode: "));
-                                                        Serial.println(section[i].mode);
-                                                    }
-
-                                                    switch (section[i].mode) // turn on the mode:
-                                                    {
-                                                        case (0): // white from RGB smooth
-                                                            section[i].colorProgress = false;
-                                                            for (uint8_t k = 0; k < 4; k++)
-                                                                section[i].RGBW[k] = 0;
-
-                                                            section[i].RGBW[3] = 1;
-                                                            section[i].masterBrightness = DEFAULT_BRIGHTNESS;
-                                                            break;
-                                                        case (1): // RGB smooth from RGB sudden
-                                                            
-                                                            section[i].colorProgress = true;
-                                                            section[i].colorState = random(12); // get a random state to start at
-
-                                                            section[i].RGBW[3] = 0;
-                                                            // for (uint8_t k = 0; k < 4; k++)
-                                                            //         section[i].RGBW[k] = 0;
-                                                                //initialize a state
-                                                            section[i].RGBW[0] = RED_LIST[section[i].colorState];
-                                                            section[i].RGBW[1] = GREEN_LIST[section[i].colorState];
-                                                            section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
-                                                            updateLights(i);
-
-                                                            section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
-                                                            section[i].colorProgressTimerStart = currentTime;
-                                                            section[i].colorProgressInterval = COLOR_PROGRESS_SMOOTH_DELAY_INIT;
-                                                            //progressColor(i);
-
-                                                            break;
-                                                        case (2): // RGB sudden from W
-                                                            // start colorProgress
-
-                                                            section[i].colorProgress = true;
-                                                            section[i].colorState = random(12); // get a random state to start at
-
-                                                            section[i].RGBW[3] = 0;
-                                                            // for (uint8_t k = 0; k < 4; k++)
-                                                            //         section[i].RGBW[k] = 0;
-                                                                //initialize a state
-                                                            section[i].RGBW[0] = RED_LIST[section[i].colorState];
-                                                            section[i].RGBW[1] = GREEN_LIST[section[i].colorState];
-                                                            section[i].RGBW[2] = BLUE_LIST[section[i].colorState];
-                                                            updateLights(i);
-
-                                                            section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
-                                                            section[i].colorProgressTimerStart = currentTime;
-                                                            section[i].colorProgressInterval = COLOR_PROGRESS_SUDDEN_DELAY_INIT;
-                                                            //progressColor(i);
-
-                                                            break;
-                                                    }
-                                                }
-                                            }
-                                            break;
-
-
-                                        case (1):        //  1 press
-                                            if (b == 1) // top  single press action
-                                            {
-                                                if (DEBUG == true)
-                                                {
-                                                    Serial.println(F(" TOP 1 "));
-                                                }
-
-                                                // PRESS TOP from off: turn on mode0 to default or to lastBrightness if available
-                                                // PRESS TOP from on: white:  cycle light brightness steps (35, 70, 100)
-                                                //                    RGB:    pause colorProgress
-                                                if (section[i].isOn == false) // from off:
-                                                {
-                                                    // TODO: turn on to last brightness if != 0
-                                                    // else turn on to default brightness
-                                                    section[i].isOn = true;
-                                                    section[i].mode = 0;
-                                                    section[i].RGBW[3] = 1;
-                                                    section[i].masterBrightness = section[i].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
-                                                }
-                                                else // from on:
-                                                {
-                                                    switch (section[i].mode)
-                                                    {
-                                                        case (1): // RGB
-                                                        case (2): // RGBW
-                                                            // for RGB modes, 1 top press pauses or resumes the colorProgress
-                                                            if (section[i].colorProgress == true)
-                                                            {
-                                                                section[i].colorProgress = false;
-                                                            }
-                                                            else
-                                                            {
-                                                                section[i].colorProgress = true;
-                                                            }
-                                                            break;
-
-                                                        default: // for other modes, cycle up brightness for colors that are on
-
-                                                            section[i].masterBrightness += 0.2;
-                                                            if (section[i].masterBrightness == 1)
-                                                            {
-                                                                section[i].masterBrightness -= 1;
-                                                            }
-                                                            else if (section[i].masterBrightness > 1)
-                                                            {
-                                                                section[i].masterBrightness = 1;
-                                                            }
-                                                    }
-                                                }
-                                            }
-                                            else //  bot single press action
-                                            {
-                                                // PRESS BOT from off: turn on nightlight mode (red and/or ww)
-                                                // PRESS BOT from on: turn off all lights, reset mode;
-
-                                                if (section[i].isOn == false)
-                                                {
-                                                    if (DEBUG == true)
-                                                    {
-                                                        Serial.println(F(" BOT 1: Nightlight "));
-                                                    }
-                                                    // turn on night light mode
-                                                    section[i].isOn = true;
-                                                    section[i].mode = 4;        //night light
-                                                    section[i].RGBW[3] = 1;     //turn on white
-                                                    section[i].RGBW[0] = 1;     //turn on red
-                                                    section[i].masterBrightness = 0.1;  //set brightness to 10%
-                                                }
-                                                else // turn off all colors
-                                                {
-                                                    if (DEBUG == true)
-                                                    {
-                                                        Serial.println(F(" BOT 1: Turn Off "));
-                                                    }
-                                                    section[i].mode = 0;
-                                                    section[i].isOn = false;
-                                                    section[i].colorProgress = false;       //in case it was on, turn of colorProgress
-                                                    for (uint8_t k = 0; k < 4; k++)
-                                                    {
-                                                        section[i].RGBW[k] = 0;
-                                                    }
-                                                    section[i].masterBrightness = 0;
-                                                }
-                                            }
-                                    } //end pressedCount switch
-                                    updateLights(i);
+                                    case (0): // bottom button action
+                                        switch (section[i]._button[b]->pressedCount)
+                                        {
+                                            case (3):
+                                                botAction3p(i, currentTime, b);
+                                                break;
+                                            case (2):
+                                                botAction2p(i, currentTime);
+                                                break;
+                                            case (1):
+                                                botAction1p(i);
+                                                break;
+                                            default:
+                                                break;
+                                        }
+                                        break;
                                 }
                             }
                             
-                            section[i]._button[b]->pressedCount = 0; // after RELEASE ACTIONS, reset pressedCount counter to 0.
-                        }                                            // END RELEASE ACTIONS (button press)
-                    }
-                }
-                
+                            section[i]._button[b]->pressedCount = 0;
+                        }
+                    } // release timer
+                } // for each button
             }
-
-            else // else buttonStatus > 255; a button is being pressed.  // PRESSED ACTIONS (register a press, and do "held button" actions)
+            else // else buttonStatus > 255: register press / do "held button" actions
             {
-                if (DEBUG == true) // {{ DEBUG }}
+                if (DEBUG == true)
                 {
-                    Serial.print(F(" section:")); Serial.print(i); // (print button reading)
-                    Serial.print(F(" pin:")); Serial.print(section[i].PIN); // (print button reading)
-                    Serial.print(F(" ")); Serial.print(buttonStatus); // (print button reading)
-                    Serial.print(F(" | "));
+                    heldActionsDEBUG(i, buttonStatus);
                 }
 
-                if (buttonStatus >= (BUTTON_RES[0] - BUTTON_RESISTANCE_TOLERANCE) && buttonStatus <= (BUTTON_RES[0] + BUTTON_RESISTANCE_TOLERANCE))
+                if (section[i].lastStatus <= 256)
+                //if current status is pressed and last status was not, button was just pressed
                 {
-                    uint8_t b = 0;
-                    // bot button held actions, fade down
-                    if (DEBUG == true) // {{ DEBUG }}
+
+                }
+
+                uint8_t b = 1;
+                if (buttonStatus >= (BUTTON_RES[b] - BUTTON_RESISTANCE_TOLERANCE) && 
+                    buttonStatus <= (BUTTON_RES[b] + BUTTON_RESISTANCE_TOLERANCE)) 
+                {
+                    if (DEBUG == true)
                     {
-                        Serial.print(F("Fade Down"));
-                        Serial.print(section[i]._button[b]->pressedCount);
-                        Serial.println(F(" presses"));
+                        btnTopHeldActionsDEBUG(i, b);
                     }
 
-                    //fade
-                    if (section[i]._button[b]->pressedTime == 0) // if button[i].pressedTime == 0 this is a NEW button press
+                    // if NEW button press
+                    if (section[i]._button[b]->pressedTime == 0) 
                     {
-                        section[i]._button[b]->pressedTime = currentTime; // save the time to detect multipresses
-                        section[i]._button[b]->pressedCount++;            // add one press to its counter
+                        btnRegisterPress(i, b, currentTime);
                     }
-                    else if (currentTime >= section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
+                    else if (currentTime >= (section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY)) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
                     {
-
-
-                        //HERE is after fade_delay, commence fading
-                        if (section[i].mode == (1 || 2) && section[i]._button[b]->pressedCount > 1) { // 2+ presses, effects colormodes 1 and 2 (rgb smooth and rgb sudden)
-
-                            // adjust speed of colorProgress
-                            // slow down (increase delay)
-                            if (colorProgressDelayCounter == COLOR_PROGRESS_DELAY_COUNTER_INIT) {   
-                                //adjust speed
-                                if (section[i].colorProgressInterval < 20000) {
-                                    section[i].colorProgressInterval++;
-                                }
-                                colorProgressDelayCounter = 0;
-                            } else {
-                                colorProgressDelayCounter++;
-                            }
-
-                        } else {       //1 press or not colormode 1||2
-
-                            if (section[i]._button[b]->beingHeld == false) // if not yet held, initialize fading:
-                            {
-                                section[i]._button[b]->beingHeld = true;
-                            }
-                            float f = FADE_FACTOR;
-                            if (currentTime >= section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY_RAPID)    //after QUICK_DELAY time, decrement an additional time per loop (double speed)
-                            {
-                                f = FADE_FACTOR_RAPID;
-                            }
-                            masterFadeDecrement(i, f);       //regular decrement
-                            updateLights(i);
-                        }
+                        btnTopHeld(i, b, currentTime);
                     }
-                    
-
-                } 
-                else if (buttonStatus >= (BUTTON_RES[1] - BUTTON_RESISTANCE_TOLERANCE) && buttonStatus <= (BUTTON_RES[1] + BUTTON_RESISTANCE_TOLERANCE)) {
-                    uint8_t b = 1;
-                    // top button held actions, fade up
-                    if (DEBUG == true) // {{ DEBUG }}
+                }
+                else 
+                {
+                    b = 0;
+                    if (buttonStatus >= (BUTTON_RES[b] - BUTTON_RESISTANCE_TOLERANCE) && 
+                        buttonStatus <= (BUTTON_RES[b] + BUTTON_RESISTANCE_TOLERANCE))
                     {
-                        Serial.print(F("Fade Up: "));
-                        Serial.print(section[i]._button[b]->pressedCount);
-                        Serial.println(F(" presses"));
-                    }
-                    
-                    //fade
-                    if (section[i]._button[b]->pressedTime == 0) // if button[i].pressedTime == 0 this is a NEW button press
-                    {
-                        section[i]._button[b]->pressedTime = currentTime; // save the time to detect multipresses
-                        section[i]._button[b]->pressedCount++;            // add one press to its counter
-                    }
-                    else if (currentTime >= section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
-                    {
-
-                        //HERE is after fade_delay
-                        if (section[i].mode == (1 || 2) && section[i]._button[b]->pressedCount > 1) { 
-                            // 2+ presses, effects colormodes 1 and 2 (rgb smooth and rgb sudden)
-
-                            // adjust speed of colorProgress
-                            // speed up (decrease delay)
-                            if (colorProgressDelayCounter == COLOR_PROGRESS_DELAY_COUNTER_INIT) {   
-                                //adjust speed
-                                
-                                if (section[i].colorProgressInterval > 1) {
-                                    section[i].colorProgressInterval--;
-                                }
-                                colorProgressDelayCounter = 0;
-                            } else {
-                                colorProgressDelayCounter++;
-                            }
-
-                        }
-                        else
-                        {       //1 press or not colormode 1||2 (rgb smooth / rgb sudden)
-                            if (section[i]._button[b]->beingHeld == false) // if not yet held, initialize fading:
-                            {
-                                section[i]._button[b]->beingHeld = true;
-                                section[i].isOn = true;
-                                if (section[i].mode == 0)
-                                {
-                                    section[i].RGBW[3] = 1;
-                                }
-                                
-                            }
-
-                            float f = FADE_FACTOR;
-                            if (currentTime >= section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY_RAPID)    //after QUICK_DELAY time, increment an additional time per loop (double speed)
-                            {
-                                f = FADE_FACTOR_RAPID;
-                            }
-                            masterFadeIncrement(i, f);       //regular increment
-                            updateLights(i);
+                        
+                        if (DEBUG == true)
+                        {
+                            btnBotHeldActionsDEBUG(i, b);
                         }
 
-                    } //end held (top button)
-                } // end top button
-
-            } // end {button held} thread
-        }     // end {check each section} loop
-    }         // update timer
+                        // if NEW button press
+                        if (section[i]._button[b]->pressedTime == 0) 
+                        {
+                            btnRegisterPress(i, b, currentTime);
+                        }
+                        else if (currentTime >= (section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY)) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
+                        {
+                            btnBotHeld(i, b, currentTime);
+                        }
+                    }
+                }
+            }
+        } // for each section
+    } // timer
 } // void loop
