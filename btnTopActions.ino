@@ -41,35 +41,34 @@ void btnTopHeld(uint8_t ii, uint8_t bb, uint32_t cTime) {
     }
 }
 
-
+//??? should make function "applyMode3", "applyMode2", etc???
 
 
 //***********************************************************************************
 
 //                  TOP PRESS ACTIONS
-
+//These happen after BUTTON_RELEASE_TIMER time has passed after a button has been released.
 //***********************************************************************************
 
 //  TRIPLE PRESS TOP: MAX BRIGHTNESS
+//from off: turn on max brightness
+//from on (any mode): turn on max brightness
 void topAction3p(uint8_t ii, uint32_t cTime, uint8_t bb) {
-    // NEED ANOTHER WAY TO CHECK THIS ABOVE, ALWAYS FALSE so NEVER LETS MAX BRIGHTNESS MODE ENGAGE
-    // maybe if is on, or something
-    if (cTime < section[ii]._button[bb]->pressedTime + BUTTON_FADE_DELAY) 
+    if (DEBUG == true)
     {
-        if (DEBUG == true)
-        {
-            Serial.println(F(" TOP 3 ")); Serial.println(F("Max Brightness {mode:3}"));
-        }
-
-        section[ii].isOn = true;
-        section[ii].masterBrightness = 1;
-        section[ii].mode = 3;
-
-        for (uint8_t k = 0; k < 4; k++)
-        {
-            section[ii].RGBW[k] = 1;
-        }
+        Serial.println(F(" TOP 3 ")); Serial.println(F("Max Brightness {mode:3}"));
     }
+
+    section[ii].isOn = true;
+    section[ii].masterBrightness = 1;
+    section[ii].mode = 3; //max brightness mode
+
+    for (uint8_t k = 0; k < 4; k++)
+    {
+        section[ii].RGBW[k] = 1;
+    }
+
+    updateLights(i);
 }
 
 
@@ -89,6 +88,8 @@ void topAction2p(uint8_t ii, uint32_t cTime) {
         Serial.println(section[ii].mode);
     }
     switchMode(ii, cTime);
+
+    updateLights(i);
 }
 
 
@@ -128,4 +129,6 @@ void topAction1p(uint8_t ii) {
                 break;
         }
     }
+    
+    updateLights(i);
 }

@@ -295,7 +295,6 @@ void loop()
                                         }
                                         break;
                                 }
-                                updateLights(i);
                             }
                         }
                         // after RELEASE ACTIONS:
@@ -314,7 +313,6 @@ void loop()
                 if (buttonStatus >= (BUTTON_RES[b] - BUTTON_RESISTANCE_TOLERANCE) && 
                     buttonStatus <= (BUTTON_RES[b] + BUTTON_RESISTANCE_TOLERANCE)) 
                 {
-                    
                     if (DEBUG == true)
                     {
                         btnTopHeldActionsDEBUG(i, b);
@@ -354,6 +352,6 @@ void loop()
                     }
                 }
             }
-        } // end {check each section} loop
+        } // for each section
     } // timer
 } // void loop

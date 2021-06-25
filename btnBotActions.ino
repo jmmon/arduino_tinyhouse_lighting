@@ -40,82 +40,96 @@ void btnBotHeld(uint8_t ii, uint8_t bb, uint32_t cTime) {
 
 
 
+//implement feedback blink? On certain actions, call a function to blink a color on a certain lightsection really quickly, to let the user know something happened. For example: when turning the porch light on, blip the underloft light green really quickly.
+//                      when turning the porch light off, blip the underloft light red really quickly. (Or different colors, but similar idea.)
 
+//This might mean that the state must be "saved" and returned to, for the section that was used for the "blink action".
 
 
 
 //***********************************************************************************
 
 //                  BOTTOM PRESS ACTIONS
-
+//These happen after BUTTON_RELEASE_TIMER time has passed after a button has been released.
 //***********************************************************************************
 
 //todo:
-// TRIPLE PRESS BOTTOM from on: if lights are on, turn off all EXCEPT PORCH. (If porch isn't on, turn all lights off.)
+// TRIPLE PRESS BOTTOM from on: 
+
+//first triple press:
+// if porch is off, turn all lights off. Otherwise, turn off all lights EXCEPT porch.
+
+//Second triple press:
 // if only PORCH is on, turn PORCH off.
+
+//Third triple press:
 // if no light is on, disco mode.
 
 void botAction3p(uint8_t n, uint32_t cTime, uint8_t m) {
-    //if not held past the fade point, we want all off. Otherwise, all we want is fade speed adjust, which happens way below.
-    if (cTime < section[n]._button[m]->pressedTime + BUTTON_FADE_DELAY) {
-        
-        if (DEBUG == true)
-        {
-            Serial.println(F(" BOT 3 "));
-        }
+    if (DEBUG == true)
+    {
+        Serial.println(F(" BOT 3 "));
+    }
 
-        // if (section[2].isOn == true) {  //if porch is on
-        // } else {
-        // }
+    if (section[2].isOn == false) {  //if porch is off
+        //turn all lights off
+    } else {
+    }
 
-        // check if any lights are on (except porch)
-        bool on = false;
-        for (uint8_t k = 0; k < LIGHTSECTION_COUNT; k++) 
+    // check if any lights are on (except porch)
+    bool on = false;
+    for (uint8_t k = 0; k < LIGHTSECTION_COUNT; k++) 
+    {
+        if (section[k].isOn == true && k != 2) //except porch, if another light section is on we take note
         {
-            if (section[k].isOn = true && k != 2) on = true;
-        }
-        if (on == true) // excluding porch, if any are on, turn them off.
-        {
-            if (DEBUG == true)
-            {
-                Serial.println(F("Light(s) are on, turn them off (except porch light)"));
-            }
-            
-            for (uint8_t k = 0; k < LIGHTSECTION_COUNT; k++) // turn off all but porch
-            {
-                if (section[k].isOn = true && k != 2) // if the light is on and it's not the porch light,
-                {
-                    section[k].isOn = false; // if "on," set to "off"
-                    section[k].colorProgress = false;
-                    for (uint8_t z = 0; z < 4; z++)
-                        section[k].RGBW[z] = 0; // and set values to 0 for each color for that light
-                    section[k].masterBrightness = 0;
-                }
-            }
-        }
-        else if (section[2].isOn == true) // else if porch is on:
-        {
-            if (DEBUG == true)
-            {
-                Serial.println(F("Only porch is on: turning off."));
-            }
-
-            section[2].isOn = false;
-            section[2].colorProgress = false;
-            for (uint8_t z = 0; z < 4; z++)
-                section[2].RGBW[z] = 0; // and set values to 0 for each color for that light
-            section[2].masterBrightness = 0;
-        }
-        else  // else no lights are on so do:
-        {
-            if (DEBUG == true)
-            {
-                Serial.println(F("Lights were off: disco mode!"));
-            }
-
-            // TODO: all is off, disco mode
+            on = true;
         }
     }
+
+
+    if (on == true) // excluding porch, if any are on, turn them off.
+    {
+        if (DEBUG == true)
+        {
+            Serial.println(F("Light(s) are on, turn them off (except porch light)"));
+        }
+        
+        for (uint8_t k = 0; k < LIGHTSECTION_COUNT; k++) // turn off all but porch
+        {
+            if (section[k].isOn = true && k != 2) // if the light is on and it's not the porch light,
+            {
+                section[k].isOn = false; // if "on," set to "off"
+                section[k].colorProgress = false;
+                for (uint8_t z = 0; z < 4; z++)
+                    section[k].RGBW[z] = 0; // and set values to 0 for each color for that light
+                section[k].masterBrightness = 0;
+            }
+        }
+    }
+    else if (section[2].isOn == true) // else if porch is on:
+    {
+        if (DEBUG == true)
+        {
+            Serial.println(F("Only porch is on: turning off."));
+        }
+
+        section[2].isOn = false;
+        section[2].colorProgress = false;
+        for (uint8_t z = 0; z < 4; z++)
+            section[2].RGBW[z] = 0; // and set values to 0 for each color for that light
+        section[2].masterBrightness = 0;
+    }
+    else  // else no lights are on so do:
+    {
+        if (DEBUG == true)
+        {
+            Serial.println(F("Lights were off: disco mode!"));
+        }
+
+        // TODO: all is off, disco mode
+    }
+
+    updateLights(i);
 }
 
 
@@ -127,7 +141,7 @@ void botAction2p(uint8_t n, uint32_t cTime) {
         botAction2pDEBUG(n);
     }
 
-    if (section[n].isOn == true)
+    if (section[n].isOn == true)    //double press from off does not switch to color mode 2 (Sudden)
     {
         section[n].mode--;
         if (section[n].mode < 0)
@@ -135,6 +149,8 @@ void botAction2p(uint8_t n, uint32_t cTime) {
             section[n].mode = NUM_OF_MODES_CYCLE - 1;
         }
         switchMode(n, cTime);
+
+        updateLights(i);
     }
 }
 
@@ -174,4 +190,6 @@ void botAction1p(uint8_t n) {
             section[n].RGBW[k] = 0;
         }
     }
+
+    updateLights(i);
 }
