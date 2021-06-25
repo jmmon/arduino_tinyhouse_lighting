@@ -167,9 +167,3 @@ How to add colorProgress speed adjustment? currently refreshes every cycle (20ms
 
 // [white mode, color mode (cycle or no), white+color mode (white at 50% of color)] + extra hidden index 3:[all lights max, not included in cycle change, only for triple press]
 
-
-
-
-Basic function:
-wait for changes in reading from the pins
-when

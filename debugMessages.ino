@@ -32,15 +32,6 @@ void heldActionsDEBUG(uint8_t ii, uint16_t bbuttonStatus) {
     Serial.print(F(" | "));
 }
 
-void botAction2pDEBUG(uint8_t nn) {
-    Serial.println(F(" BOT 2 "));
-    
-    if (section[nn].isOn == true)
-    {
-        Serial.print(F("Now in mode: ")); Serial.println(section[nn].mode);
-    }
-}
-
 void btnBotHeldActionsDEBUG(uint8_t nn, uint8_t bb) {
     Serial.print(F("Fade Down"));
     Serial.print(section[nn]._button[bb]->pressedCount);

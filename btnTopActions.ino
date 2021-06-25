@@ -1,4 +1,9 @@
 void btnTopHeld(uint8_t ii, uint8_t bb, uint32_t cTime) {
+    // if not yet held, initialize fading:
+    if (section[ii]._button[bb]->beingHeld == false) 
+    {
+        section[ii]._button[bb]->beingHeld = true;
+    }
     switch (section[ii]._button[bb]->pressedCount)
     {
         case (3):
@@ -19,10 +24,8 @@ void btnTopHeld(uint8_t ii, uint8_t bb, uint32_t cTime) {
         case (2):
             break;
         case (1):
-            // if not yet held, initialize fading:
-            if (section[ii]._button[bb]->beingHeld == false) 
+            if (section[ii]._button[bb]->beingHeld == true) 
             {
-                section[ii]._button[bb]->beingHeld = true;
                 section[ii].isOn = true;
                 if (section[ii].mode == 0)
                 {
@@ -54,6 +57,8 @@ void btnTopHeld(uint8_t ii, uint8_t bb, uint32_t cTime) {
 //from off: turn on max brightness
 //from on (any mode): turn on max brightness
 void topAction3p(uint8_t ii, uint32_t cTime, uint8_t bb) {
+
+
     if (DEBUG == true)
     {
         Serial.println(F(" TOP 3 ")); Serial.println(F("Max Brightness {mode:3}"));
@@ -68,12 +73,17 @@ void topAction3p(uint8_t ii, uint32_t cTime, uint8_t bb) {
         section[ii].RGBW[k] = 1;
     }
 
-    updateLights(i);
+    updateLights(ii);
 }
 
 
 // DOUBLE PRESS TOP: turn on if off; and switch to next mode.
 void topAction2p(uint8_t ii, uint32_t cTime) {
+    if (DEBUG == true)
+    {
+        Serial.println(F(" TOP 2 "));
+    }
+
     section[ii].isOn = true;
     section[ii].mode++;
     if (section[ii].mode >= NUM_OF_MODES_CYCLE)
@@ -81,15 +91,7 @@ void topAction2p(uint8_t ii, uint32_t cTime) {
         section[ii].mode = 0;
     }
 
-    if (DEBUG == true)
-    {
-        Serial.println(F(" TOP 2 "));
-        Serial.print(F("Now in mode: "));
-        Serial.println(section[ii].mode);
-    }
     switchMode(ii, cTime);
-
-    updateLights(i);
 }
 
 
@@ -130,5 +132,5 @@ void topAction1p(uint8_t ii) {
         }
     }
     
-    updateLights(i);
+    updateLights(ii);
 }

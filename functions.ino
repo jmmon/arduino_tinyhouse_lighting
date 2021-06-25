@@ -3,8 +3,32 @@ void btnRegisterPress(uint8_t ii, uint8_t bb, uint32_t cTime) {
     section[ii]._button[bb]->pressedCount++;      // add one press to its counter
 }
 
+void registerRelease(uint8_t ii, uint8_t bb, uint32_t cTime) {
+    section[ii]._button[bb]->pressedTime = 0; // so the next press is detected as a new press rather than a held press
+    section[ii]._button[bb]->releaseTime = cTime; // start the releaseTimer
+}
+
+void turnOffSection(uint8_t index) {
+    section[index].isOn = false; // if "on," set to "off"
+    section[index].mode = 0;
+    section[index].colorProgress = false;
+    for (uint8_t z = 0; z < 4; z++)
+    {
+        section[index].RGBW[z] = 0; // and set values to 0 for each color for that light
+    }
+    section[index].masterBrightness = 0;
+    updateLights(index);
+}
+
+
 
 void switchMode(uint8_t nn, uint32_t ccTime) {
+    if (DEBUG == true)
+    {
+        Serial.print(F("Now in mode: "));
+        Serial.println(section[nn].mode);
+    }
+
     switch (section[nn].mode)
     {
         case (0): // to: white,  from: RGB smooth
@@ -29,7 +53,6 @@ void switchMode(uint8_t nn, uint32_t ccTime) {
                 section[nn].RGBW[1] = GREEN_LIST[section[nn].colorState];
                 section[nn].RGBW[2] = BLUE_LIST[section[nn].colorState];
                 section[nn].RGBW[3] = 0;
-                updateLights(nn);
 
                 section[nn].masterBrightness = section[nn].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
                 section[nn].colorProgressTimerStart = ccTime;
@@ -37,6 +60,7 @@ void switchMode(uint8_t nn, uint32_t ccTime) {
             }
             break;
     }
+    updateLights(nn);
 }
 
 

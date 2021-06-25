@@ -59,28 +59,27 @@ uint32_t loopStartTime = 0;
 
 struct button_t
 {
-    uint32_t releaseTimer; //when was this button released?
+    uint32_t releaseTime; //when was this button released?
     uint32_t pressedTime;  //when was this button pressed?
-    uint16_t pressedDuration;  // time from press to release
-    uint8_t pressedCount;  //If button is pressed before releaseTimer ends, add one to count
+    uint8_t pressedCount;  //If button is pressed before releaseTime ends, add one to count
     bool beingHeld;        //is the button being held? (for longer than BUTTON_FADE_DELAY
 
 } button[] = {
     // Inside underloft
-    {0, 0, 0, 0, false}, //entry button up         
-    {0, 0, 0, 0, false}, //entry button down
+    {0, 0, 0, false}, //entry button up         
+    {0, 0, 0, false}, //entry button down
 
     // Outside (Porch)
-    {0, 0, 0, 0, false}, //entry2 button up
-    {0, 0, 0, 0, false}, //entry2 button down
+    {0, 0, 0, false}, //entry2 button up
+    {0, 0, 0, false}, //entry2 button down
 
     // Kitchen underloft
-    {0, 0, 0, 0, false}, //kitchen left wall
-    {0, 0, 0, 0, false}, //kitchen
+    {0, 0, 0, false}, //kitchen left wall
+    {0, 0, 0, false}, //kitchen
 
     // Bathroom (back wall right nook)
-    {0, 0, 0, 0, false}, //bath
-    {0, 0, 0, 0, false},
+    {0, 0, 0, false}, //bath
+    {0, 0, 0, false},
 
     //Back wall button
     // {0, 0, 0, 0, false}, //Back wall (left) / Greenhouse?
@@ -116,6 +115,7 @@ struct section_t
     int8_t colorCycleFadeDir;   //not used?
 
     uint8_t PIN;
+    uint16_t lastStatus;
     button_t *_button[2];
 
 } section[] = {
@@ -130,6 +130,7 @@ struct section_t
         {0., 0., 0.}, 
         1, 1, 
         ENTRY_BUTTON_PIN, 
+        0,
         {&button[0], &button[1]}
     },
 
@@ -144,6 +145,7 @@ struct section_t
         {0, 0, 0}, 
         1, 1, 
         KITCHEN_BUTTON_PIN, 
+        0,
         {&button[4], &button[5]}
     },
 
@@ -158,6 +160,7 @@ struct section_t
         {0, 0, 0}, 
         1, 1, 
         ENTRY2_BUTTON_PIN, 
+        0,
         {&button[2], &button[3]}
     },
 
@@ -172,6 +175,7 @@ struct section_t
         {0, 0, 0}, 
         1, 1, 
         BATH_BUTTON_PIN, 
+        0,
         {&button[6], &button[7]}
     },
 
@@ -236,27 +240,29 @@ void loop()
         for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) 
         {
             uint16_t buttonStatus = analogRead(section[i].PIN);
-            if (buttonStatus <= 256) // if no button is pressed check for Releases:
+
+            if (buttonStatus <= 256) // if no button is pressed:
             {
                 for (uint8_t b = 0; b < 2; b++) 
                 {
-                    // check if button[i] was just released
+                    // check if button[b] was just released
                     if (section[i]._button[b]->pressedTime > 0) 
                     {
-                        section[i]._button[b]->pressedTime = 0; // so the next press is detected as a new press rather than a held press
-                        section[i]._button[b]->releaseTimer = currentTime + BUTTON_RELEASE_TIMER; // start the releaseTimer
-                    }
-                    else if (currentTime >= section[i]._button[b]->releaseTimer)
-                    // in case user is attempting a double or triple press wait for releaseTimer before commencing "release actions"
+                        registerRelease(i, b, currentTime);
+                    } 
+                    else if (section[i]._button[b]->releaseTime != 0 && 
+                        currentTime >= section[i]._button[b]->releaseTime + BUTTON_RELEASE_TIMER)
+                    // in case user is attempting a double or triple press wait for releaseTime before commencing "release actions"
                     {
-                        if (section[i]._button[b]->beingHeld == true) 
+                        section[i]._button[b]->releaseTime = 0;
+                        if (section[i]._button[b]->pressedCount > 0)
                         {
-                            //mark as not held in case it was
-                            section[i]._button[b]->beingHeld = false;
-                        }
-                        else    //if button is not held commence Release action
-                        {
-                            if (section[i]._button[b]->pressedCount > 0)
+                            if (section[i]._button[b]->beingHeld == true) 
+                            {
+                                //if was held, set to false and reset pressedCount to prevent release actions from happening
+                                section[i]._button[b]->beingHeld = false;
+                            }
+                            else
                             {
                                 if (section[i]._button[b]->pressedCount > MAX_PRESS_COUNT)
                                 {
@@ -277,6 +283,8 @@ void loop()
                                             case (1):
                                                 topAction1p(i);
                                                 break;
+                                            default:
+                                                break;
                                         }
                                         break;
 
@@ -292,13 +300,15 @@ void loop()
                                             case (1):
                                                 botAction1p(i);
                                                 break;
+                                            default:
+                                                break;
                                         }
                                         break;
                                 }
                             }
+                            
+                            section[i]._button[b]->pressedCount = 0;
                         }
-                        // after RELEASE ACTIONS:
-                        section[i]._button[b]->pressedCount = 0; 
                     } // release timer
                 } // for each button
             }
@@ -307,6 +317,12 @@ void loop()
                 if (DEBUG == true)
                 {
                     heldActionsDEBUG(i, buttonStatus);
+                }
+
+                if (section[i].lastStatus <= 256)
+                //if current status is pressed and last status was not, button was just pressed
+                {
+
                 }
 
                 uint8_t b = 1;
