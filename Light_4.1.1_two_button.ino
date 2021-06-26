@@ -1,6 +1,6 @@
 #include <avr/pgmspace.h>
 #include <DmxSimple.h>
-const String VERSION = "Light_4.0.0: Structs and Light ID\n - SERIAL Enabled; DMX Disabled";
+const String VERSION = "Light_4.1.1: Structs and Light ID\n - SERIAL Enabled; DMX Disabled";
 const bool DEBUG = false;
 
 const uint8_t   KITCHEN_BUTTON_PIN  =   A3,
@@ -51,20 +51,17 @@ const uint8_t COLOR_PROGRESS_DELAY_COUNTER_INIT = 5;    // 5 * 20ms (main loop t
 uint16_t colorProgressDelayCounter = 0;
 uint32_t loopStartTime = 0;
 
-//*************************************************************************************************************************************
+uint32_t currentTime = 0;
 
-//                                              Structs
 
-//*************************************************************************************************************************************
+struct btn_t {
 
-struct button_t
-{
     uint32_t releaseTime; //when was this button released?
     uint32_t pressedTime;  //when was this button pressed?
     uint8_t pressedCount;  //If button is pressed before releaseTime ends, add one to count
     bool beingHeld;        //is the button being held? (for longer than BUTTON_FADE_DELAY
 
-} button[] = {
+} btn[] = {
     // Inside underloft
     {0, 0, 0, false}, //entry button up         
     {0, 0, 0, false}, //entry button down
@@ -89,8 +86,8 @@ struct button_t
 };
 
 
-struct section_t
-{
+struct section_t {
+
     float RGBW[4];     // stores current RGBW color levels
 
     float lastRGBW[4]; // last color levels
@@ -101,22 +98,19 @@ struct section_t
 
     bool isOn;               // Are any levels > 0?
     float BRIGHTNESS_FACTOR; // affects [default brightness + fade speed], pref range [0-1]
-    uint8_t DMXout;          // DMX OUT number (set of 4 channels) for this section
-
-    float colorDelayCounter; // slows the color cycle, used to slow the "sudden" mode
-    uint8_t colorState;        // next color state in the cycle
-    bool colorProgress;        // while true, colors for this section will cycle
+    uint8_t DMX_OUT;          // DMX OUT number (set of 4 channels) for this section
 
     uint32_t colorProgressTimerStart;   // starting time of colorProgress
     uint16_t colorProgressInterval;     // adjust this to change colorProgress speed
+    float colorDelayCounter; // slows the color cycle, used to slow the "sudden" mode
+
+    uint8_t colorState;        // next color state in the cycle
+    bool colorProgress;        // while true, colors for this section will cycle
 
     float nextRGB[3]; // next state of RGB for colorProgress cycle. Stores index of lookup table. Could be modified by colorFadeLevel to change the max level for the colorProgress.
-    float colorCycleFadeLevel;  //not used?
-    int8_t colorCycleFadeDir;   //not used?
 
     uint8_t PIN;
-    uint16_t lastStatus;
-    button_t *_button[2];
+    btn_t *_btn[2];
 
 } section[] = {
     //  ID 0    Living Room Lights
@@ -125,13 +119,11 @@ struct section_t
         {0., 0., 0., 0.}, 
         1., 0, 
         false, 0.8, 4, 
-        0., 0, false, 
-        0, 0, 
+        0, 0, 0., 
+        0, false, 
         {0., 0., 0.}, 
-        1, 1, 
         ENTRY_BUTTON_PIN, 
-        0,
-        {&button[0], &button[1]}
+        {&btn[0], &btn[1]}
     },
 
     //  ID 1    Kitchen Lights
@@ -140,13 +132,11 @@ struct section_t
         {0., 0., 0., 0.}, 
         1., 0, 
         false, 1, 3, 
-        0., 0, false, 
-        0, 0, 
+        0, 0, 0., 
+        0, false, 
         {0, 0, 0}, 
-        1, 1, 
         KITCHEN_BUTTON_PIN, 
-        0,
-        {&button[4], &button[5]}
+        {&btn[4], &btn[5]}
     },
 
     //  ID 2   Porch Lights
@@ -155,13 +145,11 @@ struct section_t
         {0., 0., 0., 0.}, 
         1., 0, 
         false, 0.9, 2, 
-        0., 0, false, 
-        0, 0, 
+        0, 0, 0., 
+        0, false, 
         {0, 0, 0}, 
-        1, 1, 
         ENTRY2_BUTTON_PIN, 
-        0,
-        {&button[2], &button[3]}
+        {&btn[2], &btn[3]}
     },
 
     //  ID 3   bath
@@ -170,13 +158,11 @@ struct section_t
         {0., 0., 0., 0.}, 
         1., 0, 
         false, 1.0, 1, 
-        0., 0, false, 
-        0, 0, 
+        0, 0, 0., 
+        0, false, 
         {0, 0, 0}, 
-        1, 1, 
         BATH_BUTTON_PIN, 
-        0,
-        {&button[6], &button[7]}
+        {&btn[6], &btn[7]}
     },
 
     //  ID     Overhead Bedroom
@@ -186,188 +172,87 @@ struct section_t
 };
 
 
-void setup()
-{
-    for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++)
-    {
+void setup() {
+    for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) 
         pinMode(section[i].PIN, INPUT);
-    }
+    
     randomSeed(analogRead(0)); //get random seed; used to start colorProgress state at a random color
     loopStartTime = millis();
+    currentTime = loopStartTime;
 
-    if (DEBUG == true)
-    {
-        Serial.begin(9600); Serial.println(VERSION);
-    }
-    else
-    {
+    if (DEBUG) {
+        Serial.begin(9600); 
+        Serial.println(VERSION);
+
+    } else {
         DmxSimple.maxChannel(CHANNELS);
         DmxSimple.usePin(DMX_PIN);
-        for (uint8_t i = 1; i <= CHANNELS; i++) //turn off all light channels
-        {
-            DmxSimple.write(i, 0);
-        }
+
+        for (uint8_t i = 1; i <= CHANNELS; i++)
+            DmxSimple.write(i, 0); // turn off all light channels
     }
 }
 
 
-void loop()
-{
-    uint32_t currentTime = millis();
-    for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) 
-    {
-        if (section[i].colorProgress == true) 
-        {
-            if ((currentTime - section[i].colorProgressTimerStart) >= section[i].colorProgressInterval) 
-            {
+void loop() {
+    currentTime = millis();
+
+    for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) {
+        
+        if (section[i].colorProgress == true) {
+
+            if ((currentTime - section[i].colorProgressTimerStart) >= section[i].colorProgressInterval) {
+
                 section[i].colorProgressTimerStart += section[i].colorProgressInterval;
-                if (section[i].mode == 2) // sudden color changes
-                {
+
+                if (section[i].mode == 2) 
                     progressColorSudden(i);
-                }
+
                 else if (section[i].mode == 1) 
-                {
                     progressColorSmooth(i);
-                }
             }
         }
     }
 
-    if ((currentTime - loopStartTime) >= LOOP_DELAY_INTERVAL) // 20ms loop
-    {
+    if ((currentTime - loopStartTime) >= LOOP_DELAY_INTERVAL) {
+
         loopStartTime += LOOP_DELAY_INTERVAL; // set time for next timer
 
-        for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) 
-        {
-            uint16_t buttonStatus = analogRead(section[i].PIN);
+        for (uint8_t i = 0; i < LIGHTSECTION_COUNT; i++) {
 
-            if (buttonStatus <= 256) // if no button is pressed:
-            {
-                for (uint8_t b = 0; b < 2; b++) 
-                {
-                    // check if button[b] was just released
-                    if (section[i]._button[b]->pressedTime > 0) 
-                    {
-                        registerRelease(i, b, currentTime);
-                    } 
-                    else if (section[i]._button[b]->releaseTime != 0 && 
-                        currentTime >= section[i]._button[b]->releaseTime + BUTTON_RELEASE_TIMER)
-                    // in case user is attempting a double or triple press wait for releaseTime before commencing "release actions"
-                    {
-                        section[i]._button[b]->releaseTime = 0;
-                        if (section[i]._button[b]->pressedCount > 0)
-                        {
-                            if (section[i]._button[b]->beingHeld == true) 
-                            {
-                                //if was held, set to false and reset pressedCount to prevent release actions from happening
-                                section[i]._button[b]->beingHeld = false;
-                            }
-                            else
-                            {
-                                if (section[i]._button[b]->pressedCount > MAX_PRESS_COUNT)
-                                {
-                                    section[i]._button[b]->pressedCount = MAX_PRESS_COUNT;
-                                }
+            uint16_t btnStatus = analogRead(section[i].PIN);
 
-                                switch (b)
-                                {
-                                    case (1): // top button action
-                                        switch(section[i]._button[b]->pressedCount)
-                                        {
-                                            case (3):
-                                                topAction3p(i, currentTime, b);
-                                                break;
-                                            case (2):
-                                                topAction2p(i, currentTime);
-                                                break;
-                                            case (1):
-                                                topAction1p(i);
-                                                break;
-                                            default:
-                                                break;
-                                        }
-                                        break;
+            for (uint8_t b = 0; b < 2; b++) {
 
-                                    case (0): // bottom button action
-                                        switch (section[i]._button[b]->pressedCount)
-                                        {
-                                            case (3):
-                                                botAction3p(i, currentTime, b);
-                                                break;
-                                            case (2):
-                                                botAction2p(i, currentTime);
-                                                break;
-                                            case (1):
-                                                botAction1p(i);
-                                                break;
-                                            default:
-                                                break;
-                                        }
-                                        break;
-                                }
-                            }
-                            
-                            section[i]._button[b]->pressedCount = 0;
-                        }
-                    } // release timer
-                } // for each button
-            }
-            else // else buttonStatus > 255: register press / do "held button" actions
-            {
-                if (DEBUG == true)
-                {
-                    heldActionsDEBUG(i, buttonStatus);
-                }
+                if (btnStatus <= 255) {      // if no button is pressed:
 
-                if (section[i].lastStatus <= 256)
-                //if current status is pressed and last status was not, button was just pressed
-                {
+                    if (section[i]._btn[b]->pressedTime > 0) 
+                        btnRegisterNewRelease(i, b);
 
-                }
+                    
+                    else if ((section[i]._btn[b]->releaseTime != 0) && (currentTime >= (section[i]._btn[b]->releaseTime + BUTTON_RELEASE_TIMER))) 
+                        // after small wait, commmence actions for the pressed button
+                        btnPressedActions(i, b);
+                    
+                } else if ((btnStatus >= (BUTTON_RES[b] - BUTTON_RESISTANCE_TOLERANCE)) && (btnStatus <= (BUTTON_RES[b] + BUTTON_RESISTANCE_TOLERANCE))) {
+                    // else btnStatus > 255: register press and/or do "held button" actions
 
-                uint8_t b = 1;
-                if (buttonStatus >= (BUTTON_RES[b] - BUTTON_RESISTANCE_TOLERANCE) && 
-                    buttonStatus <= (BUTTON_RES[b] + BUTTON_RESISTANCE_TOLERANCE)) 
-                {
-                    if (DEBUG == true)
-                    {
-                        btnTopHeldActionsDEBUG(i, b);
-                    }
+                    if (DEBUG)
+                        heldActionsDEBUG(i, b, btnStatus);
 
-                    // if NEW button press
-                    if (section[i]._button[b]->pressedTime == 0) 
-                    {
-                        btnRegisterPress(i, b, currentTime);
-                    }
-                    else if (currentTime >= (section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY)) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
-                    {
-                        btnTopHeld(i, b, currentTime);
+                    if (section[i]._btn[b]->pressedTime == 0) 
+                        btnRegisterNewPress(i, b);
+
+                    else if (currentTime >= (section[i]._btn[b]->pressedTime + BUTTON_FADE_DELAY)) {
+
+                        if (b == 0) 
+                            btnBotHeld(i, b);
+
+                        else 
+                            btnTopHeld(i, b);
                     }
                 }
-                else 
-                {
-                    b = 0;
-                    if (buttonStatus >= (BUTTON_RES[b] - BUTTON_RESISTANCE_TOLERANCE) && 
-                        buttonStatus <= (BUTTON_RES[b] + BUTTON_RESISTANCE_TOLERANCE))
-                    {
-                        
-                        if (DEBUG == true)
-                        {
-                            btnBotHeldActionsDEBUG(i, b);
-                        }
-
-                        // if NEW button press
-                        if (section[i]._button[b]->pressedTime == 0) 
-                        {
-                            btnRegisterPress(i, b, currentTime);
-                        }
-                        else if (currentTime >= (section[i]._button[b]->pressedTime + BUTTON_FADE_DELAY)) // if button has been pressed and held past BUTTON_FADE_DELAY, button is being held:
-                        {
-                            btnBotHeld(i, b, currentTime);
-                        }
-                    }
-                }
-            }
-        } // for each section
-    } // timer
+            } // button loop
+        } // section loop
+    } // timer loop
 } // void loop
