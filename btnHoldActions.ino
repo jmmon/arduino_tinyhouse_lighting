@@ -40,11 +40,14 @@ void btnHeldActions(uint8_t ii, uint8_t bb) {   // happens every loop while held
 
 
 void btnTopHeld1p(uint8_t ii) {
-    if (!(section[ii])) {  // if turning on from off
+    if (!(section[ii].isOn)) {  // if turning on from off
         section[ii].isOn = true;
-        section[nn].colorProgress = false;
-        section[ii].RGBW[3] = 1;
-        section[ii].RGBWon[3] = true;
+        section[ii].colorProgress = false;
+        if (section[ii].mode == 0) {
+            section[ii].RGBWon[3] = true;
+        } else if (section[ii].mode == (4 || 5 || 6)) {
+            section[ii].RGBWon[section[ii].mode-4] = true;
+        }
     }
     
     float tempSpeed = 0;

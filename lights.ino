@@ -128,14 +128,16 @@ void updateLights(uint8_t i) { // updates a specific light section
         }
     }
     
-    if ( (section[i].RGBW[0] <= 0) && (section[i].RGBW[1] <= 0) && (section[i].RGBW[2] <= 0) && (section[i].RGBW[3] <= 0) ) {
-        section[i].isOn = false;
-        section[i].masterLevel = 0;
-
-        for (uint8_t z = 0; z < 4; z++) { //clear rgb
+    for (uint8_t z = 0; z < 4; z++) { //clear rgb
+        if (section[i].RGBW[z] <= 0) {
             section[i].RGBW[z] = 0;
             section[i].RGBWon[z] = false;
         }
+    }
+    
+    if ( !(section[i].RGBW[0]) && !(section[i].RGBW[1]) && !(section[i].RGBW[2]) && !(section[i].RGBW[3]) ) {
+        section[i].isOn = false;
+        section[i].masterLevel = 0;
 
         if (DEBUG) {
             updateLightsOffDEBUG(i);
