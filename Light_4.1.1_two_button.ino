@@ -3,64 +3,56 @@
 const String VERSION = "Light_4.1.1: Structs and Light ID\n - SERIAL Enabled; DMX Disabled";
 const bool DEBUG = false;
 
+const uint8_t DMX_PIN  =   3;
+const uint8_t CHANNELS = 64;
+
+const uint16_t BTN_RESIST[2] = {488, 968};     // [0]bottom button returns ~3.3v  [1] top button returns ~5v
+const uint8_t BTN_RESIST_TOLERANCE = 200; // BTN_RESIST +/- BTN_RESIST_TOLERANCE
+const uint8_t MAX_PRESS_COUNT = 3;              // single, double, triple press
+
+const uint8_t SECTION_COUNT = 4;
 const uint8_t   KITCHEN_BTN_PIN  =   A3,
                 ENTRY_BTN_PIN    =   A4,
                 ENTRY2_BTN_PIN   =   A2,
-                BATH_BTN_PIN     =   A5,
-                // SCONCE_BUTTON_PIN = A2;
-                // BACKWALL_BUTTON_PIN = A5;
+                BATH_BTN_PIN     =   A5;
 
-                        DMX_PIN  =   3;
+                //const uint8_t SCONCE_BUTTON_PIN = A2;
+                //const uint8_t BACKWALL_BUTTON_PIN = A5;
 
-const uint8_t CHANNELS = 64;
-const uint16_t BTN_RESIST[2] = {488, 968};     // [0]bottom button returns ~3.3v  [1] top button returns ~5v
-const uint8_t BTN_RESIST_TOLERANCE = 200; // BTN_RESIST +/- BTN_RESIST_TOLERANCE
 const uint8_t LOOP_DELAY_INTERVAL = 20;     // refresh speed in ms   {for ms=1: factor=0.00001; amount=0.018}
-
-const uint8_t MAX_PRESS_COUNT = 3;              // single, double, triple press
-const uint8_t MAX_MODE_SINGLE_COLOR = 6;    // red==4, green==5, blue==6;
 const uint8_t BTN_FADE_DELAY = 230;          // minimum time the button must be held to start "held" action;
 const uint16_t BTN_RELEASE_TIMER = 250;      // time allowed between release and next press for multipresses
 
 const float DEFAULT_BRIGHTNESS = 0.60; // 0-1 (percent) value for default brightness when turned on
-const float FADE_FACTOR = 0.005;      // base fade adjustment; modified by section[].BRIGHTNESS_FACTOR
+const float FADE_AMOUNT = 0.005;      // base fade adjustment; modified by section[].BRIGHTNESS_FACTOR
 
-const uint16_t BTN_FADE_DELAY_RAPID = 460;       // after this time, fade more quickly
-const float FADE_FACTOR_RAPID = 0.01;               // fade adjustment for rapid fading
+const uint8_t NUM_OF_MODES_CYCLE = 3;
+const uint8_t MAX_MODE_SINGLE_COLOR = 7;    // red==4, green==5, blue==6, TODO: combined==7;
 
-const uint16_t BTN_FADE_DELAY_RAPID2 = 690;       // after this time, fade more quickly
-const float FADE_FACTOR_RAPID2 = 0.02;               // fade adjustment for rapid fading
 const uint8_t MAX_COLOR_STATE = 12;
-const float _HIGH = 0.95; // 0.995;
-const float _MID =  0.85; // 0.878;
-const float _LOW = 0.65; // 0.6;
+const float _HIGH = 0.95,
+             _MID =  0.85,
+             _LOW = 0.60;
+
+const float RED_LIST[12] =   {1., _HIGH,  _MID, _LOW,     0, 0,       0, 0,           0, _LOW,    _MID, _HIGH },
+            GREEN_LIST[12] = {0, _LOW,    _MID, _HIGH,    1., _HIGH,  _MID, _LOW,     0, 0,       0, 0        },
+            BLUE_LIST[12] =  {0, 0,       0, 0,           0, _LOW,    _MID, _HIGH,    1., _HIGH,  _MID, _LOW};
 
 // const float RED_LIST[] = {1., _MID, 0, 0, 0, _MID};
 // const float GREEN_LIST[] = {0, _MID, 1., _MID, 0, 0};
 // const float BLUE_LIST[] = {0, 0, 0, _MID, 1., _MID};
 
-const float RED_LIST[] =   {1., _HIGH,  _MID, _LOW,     0, 0,       0, 0,           0, _LOW,    _MID, _HIGH };
-const float GREEN_LIST[] = {0, _LOW,    _MID, _HIGH,    1., _HIGH,  _MID, _LOW,     0, 0,       0, 0        };
-const float BLUE_LIST[] =  {0, 0,       0, 0,           0, _LOW,    _MID, _HIGH,    1., _HIGH,  _MID, _LOW} ;
-
 const float COLOR_LOOP_FADE_AMOUNT = 0.001;  // interval amount?
-
-const uint8_t NUM_OF_MODES_CYCLE = 3;
-const uint8_t SECTION_COUNT = 4;
-
-const uint16_t COLOR_LOOP_SMOOTH_DELAY_INT = 20; //ms
+const uint8_t COLOR_LOOP_SMOOTH_DELAY_INT = 20; //ms
 const uint16_t COLOR_LOOP_SUDDEN_DELAY_INT = 3000; //ms
 
 const uint8_t COLOR_LOOP_DELAY_CTR_INT = 5;    // 5 * 20ms (main loop time) per adjustment
-
 uint16_t colorLoopDelayCtr = 0;
 uint32_t loopStartTime = 0;
-
 uint32_t currentTime = 0;
 
 
 struct btn_t {
-
     uint32_t timeReleased; //when was this button released?
     uint32_t timePressed;  //when was this button pressed?
     uint8_t pressCt;  //If button is pressed before timeReleased ends, add one to count
@@ -242,11 +234,11 @@ void loop() {
                     
 
                     else if ((section[i]._btn[b]->timeReleased != 0) && (currentTime >= (section[i]._btn[b]->timeReleased + BTN_RELEASE_TIMER))) 
-                        // after small wait
-                        btnActions(i, b);
+                        btnActions(i, b); // after small wait
 
                     
-                } else // else btnStatus > 255: register press and/or do "held button" actions
+                } else      // else btnStatus > 255: register press and/or do "held button" actions
+
                 if ((btnStatus >= (BTN_RESIST[b] - BTN_RESIST_TOLERANCE)) && (btnStatus <= (BTN_RESIST[b] + BTN_RESIST_TOLERANCE))) {
 
                     if (DEBUG) {
@@ -260,10 +252,9 @@ void loop() {
                         section[i]._btn[b]->timePressed = currentTime; // save the time
                     }
 
-                    else if (currentTime >= (section[i]._btn[b]->timePressed + BTN_FADE_DELAY)) {
+                    else if (currentTime >= (section[i]._btn[b]->timePressed + BTN_FADE_DELAY)) 
                         btnHeldActions(i, b);
-                        
-                    }
+
                 }
             } // button loop
         } // section loop

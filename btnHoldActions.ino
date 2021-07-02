@@ -50,22 +50,18 @@ void btnTopHeld1p(uint8_t ii) {
         }
     }
     
-    float tempSpeed = 0;
-    if (currentTime >= (section[ii]._btn[1]->timePressed + BTN_FADE_DELAY_RAPID2))
-        tempSpeed = FADE_FACTOR_RAPID; // after QUICK_DELAY time, adjust quadruple fast
+   float tempSpeed = FADE_AMOUNT; // regular fade increment
+    if (currentTime >= (section[ii]._btn[0]->timePressed + (BTN_FADE_DELAY * 3)) 
+        tempSpeed = FADE_AMOUNT * 2 * 2; // quadruple amount after triple time
 
-    else if (currentTime >= (section[ii]._btn[1]->timePressed + BTN_FADE_DELAY_RAPID))
-        tempSpeed = FADE_FACTOR_RAPID; // after QUICK_DELAY time, adjust double fast
-        
-    else
-        tempSpeed = FADE_FACTOR_RAPID;       //increment
+    else if (currentTime >= (section[ii]._btn[0]->timePressed + (BTN_FADE_DELAY * 2))) 
+        tempSpeed = FADE_AMOUNT * 2; // double amount after double time
 
     masterFadeIncrement(ii, tempSpeed);
 
     // switch(section[ii].mode) {
-    //     case(0):
-    //         //white
-    //         if (section[ii].extendedFade) {
+    //     case(0): // white
+    //         if (section[ii].extendedFade) {-
     //             fadeIncrement(ii, tempSpeed, 0);
     //             fadeIncrement(ii, tempSpeed, 1);
     //             fadeIncrement(ii, tempSpeed, 2);
@@ -73,20 +69,21 @@ void btnTopHeld1p(uint8_t ii) {
     //             fadeIncrement(ii, tempSpeed, 3);
     //         }
     //     break;
-    //     case(1):
-    //     case(2):
-    //         //rgb smooth
-    //         //rgb sudden
+
+    //     case(1): // rgb smooth
+    //     case(2): // rgb sudden
+    //     case(7): // combined
     //         if (section[ii].extendedFade) {
     //             fadeIncrement(ii, tempSpeed, 3);
     //         } else {
     //             masterFadeIncrement(ii, tempSpeed);
     //         }
     //     break;
-    //     case(3):
+
+    //     case(3): // max
     //         masterFadeIncrement(ii, tempSpeed);
-    //         //max
     //     break;
+
     //     case(4): // red
     //     case(5): // green
     //     case(6): // blue
@@ -94,14 +91,6 @@ void btnTopHeld1p(uint8_t ii) {
     //             fadeIncrement(ii, tempSpeed, 3);
     //         } else {
     //             fadeIncrement(ii, tempSpeed, section[ii].RGBW[section[ii].mode]-4);
-    //         }
-    //     break;
-    //     case(7):
-    //         //combined
-    //         if (section[ii].extendedFade) {
-    //             fadeIncrement(ii, tempSpeed, 3);
-    //         } else {
-    //             masterFadeIncrement(ii, tempSpeed);
     //         }
     //     break;
     // }
@@ -130,23 +119,18 @@ void btnTopHeld3p(uint8_t ii) {
 
 void btnBotHeld1p(uint8_t ii) {
     //first fade down rgb/white if on, then the current mode fade down.
-    float tempSpeed = 0;
-    if (currentTime >= (section[ii]._btn[0]->timePressed + BTN_FADE_DELAY_RAPID2)) 
-        tempSpeed = FADE_FACTOR_RAPID2; // after QUICK_DELAY time, adjust quadruple fast
+    float tempSpeed = FADE_AMOUNT; // regular fade decrement
+    if (currentTime >= (section[ii]._btn[0]->timePressed + (BTN_FADE_DELAY * 3)) 
+        tempSpeed = FADE_AMOUNT * 2 * 2; // quadruple speed after triple time
 
-    else if (currentTime >= (section[ii]._btn[0]->timePressed + BTN_FADE_DELAY_RAPID)) 
-        tempSpeed = FADE_FACTOR_RAPID; // after QUICK_DELAY time, adjust double fast
-
-    else {
-        tempSpeed = FADE_FACTOR;       // regular decrement
-    }
+    else if (currentTime >= (section[ii]._btn[0]->timePressed + (BTN_FADE_DELAY * 2))) 
+        tempSpeed = FADE_AMOUNT * 2; // double delay speed after double time
 
     masterFadeDecrement(ii, tempSpeed);
 
     // switch(section[ii].mode) {
-    //     case(0):
-    //         //white
-    //         if (section[ii].extendedFade) {
+    //     case(0): // white
+    //         if (section[ii].extendedFade) {-
     //             fadeDecrement(ii, tempSpeed, 0);
     //             fadeDecrement(ii, tempSpeed, 1);
     //             fadeDecrement(ii, tempSpeed, 2);
@@ -154,20 +138,21 @@ void btnBotHeld1p(uint8_t ii) {
     //             fadeDecrement(ii, tempSpeed, 3);
     //         }
     //     break;
-    //     case(1):
-    //     case(2):
-    //         //rgb smooth
-    //         //rgb sudden
+
+    //     case(1): // rgb smooth
+    //     case(2): // rgb sudden
+    //     case(7): // combined
     //         if (section[ii].extendedFade) {
     //             fadeDecrement(ii, tempSpeed, 3);
     //         } else {
     //             masterFadeDecrement(ii, tempSpeed);
     //         }
     //     break;
-    //     case(3):
+
+    //     case(3): // max
     //         masterFadeDecrement(ii, tempSpeed);
-    //         //max
     //     break;
+
     //     case(4): // red
     //     case(5): // green
     //     case(6): // blue
@@ -175,14 +160,6 @@ void btnBotHeld1p(uint8_t ii) {
     //             fadeDecrement(ii, tempSpeed, 3);
     //         } else {
     //             fadeDecrement(ii, tempSpeed, section[ii].RGBW[section[ii].mode]-4);
-    //         }
-    //     break;
-    //     case(7):
-    //         //combined
-    //         if (section[ii].extendedFade) {
-    //             fadeDecrement(ii, tempSpeed, 3);
-    //         } else {
-    //             masterFadeDecrement(ii, tempSpeed);
     //         }
     //     break;
     // }
