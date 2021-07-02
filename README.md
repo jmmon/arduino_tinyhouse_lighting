@@ -97,19 +97,21 @@ timer loop {
   down hold: fade down
   down press: cancel color change mode, set at equivalent brightness to colorChangeMode.brightness
 
-  hidden[...2](
   Max brightness (RGBW):  [3]   //not included in normal cycle; "hidden"
     tap top: (if on) {if isMax {go default brightness} else {go max brightness}}  //toggle between max and medium, maybe make 4 steps?
     hold top: increase brightness
     hold bottom: decrease brightness
     tap bottom: turn off
 
-  Nightlight (RW): [4]    //special case, tap bottom from [off]
+  Nightlight (R): [4]    //special case, tap bottom from [off]
     tap top: cycle up brightness (low, medium, high) OR (medium, high, low)
     hold top: fade
     hold bottom: fade
     tap bottom: turn off
-  )
+
+  (G): [5]
+  (B): [6]
+
 
   so, section needs to save a mode for it's current mode, and using that mode along with whether the color is on or off, decide what to do.
   still only need to deal with single, double, triple presses, and hold functions for single press.
@@ -166,4 +168,44 @@ How to add colorProgress speed adjustment? currently refreshes every cycle (20ms
 
 
 // [white mode, color mode (cycle or no), white+color mode (white at 50% of color)] + extra hidden index 3:[all lights max, not included in cycle change, only for triple press]
+
+
+
+//implement feedback blink? On certain actions, call a function to blink a color on a certain lightsection really quickly, to let the user know something happened. For example: when turning the porch light on, blip the underloft light green really quickly.
+//                      when turning the porch light off, blip the underloft light red really quickly. (Or different colors, but similar idea.)
+
+//This might mean that the state must be "saved" and returned to, for the section that was used for the "blink action".
+
+
+
+
+
+in nightlight mode, double tap to switch to blue then green? (done)
+
+
+
+
+
+
+
+
+
+TODO
+when in nightlight mode, fading to off should switch out of nightlight mode 
+?? or not? stay in "red" mode?
+
+mode 7: 
+Then all the previous levels combined? haha
+
+Same with white: after hitting max brightness, fading up again turns on rgb as a white, then fading down will fade rgb then w
+colorProgress: after hitting max brightness, next time it fades it adds white? then fading down first fades down white then fades color.
+
+double press and hold on white fades ALL sets with white? or all?
+(Double press and hold on color fades ALL sets with color) or all?
+    - Don't adjust the original white level - instead use a second variable so they can stay in sync with each other in terms of starting difference in brightness level
+
+
+
+
+
 
