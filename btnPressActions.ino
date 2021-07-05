@@ -3,42 +3,73 @@ void btnActions(uint8_t ii, uint8_t bb) {
 
     if (section[ii]._btn[bb]->isHeld) {  // runs once if the button was released from a hold
         section[ii]._btn[bb]->isHeld = false;
+    }
 
-        //if max brightness, enable extended fade
-        //(if min brightness, disable extended fade)
-        if (bb == 0) {
-            //bottom
-            if (section[ii].extendedFade) {
-                if (section[ii].mode == 0) {
-                    if (section[ii].RGBW[3] <= 0) {
+    // has to go here, if it's under holdActions it doesn't break the fade, just allows 0 thru max extended
+    if (bb == 0) { // bottom (fade down)
+        if (section[ii].extendedFade) {
+            //check if mode's extended level is max and if so disable extendedFade
+            switch(section[ii].mode) {
+                case(0): // white 
+                    // if rgb are 0, disable extended fade
+                    // if (section[ii].RGBW[0] <= 0 && section[ii].RGBW[1] <= 0 && section[ii].RGBW[2] <= 0) {
+                    if ( section[ii].RGBW[0] <= 0 && section[ii].RGBW[1] <= 0 && section[ii].RGBW[2] <= 0 ) { //RGB is extended fade
                         section[ii].extendedFade = false;
                     } // else hasn't hit min yet
-                } else if (section[ii].mode == (1 || 2)) {
-                    if (section[ii].masterLevel <= 0) {
+                break;
+
+                case(3): // max brightness
+                    //no change
+                break;
+                
+                case(1): // RGB Smooth
+                case(2): // RGB Sudden
+                case(4): // Red
+                case(5): // Green
+                case(6): // Blue
+                case(7): // Combined
+                    if (section[ii].RGBW[3] <= 0) { // white is extended fade, wait for this to be off
                         section[ii].extendedFade = false;
                     } // else hasn't hit min yet
-                } else if (section[ii].mode == (4 || 5 || 6)) {
-                    if (section[ii].RGBW[section[ii].mode - 4] <= 0) {
-                        section[ii].extendedFade = false;
-                    } // else hasn't hit min yet
-                }
+                break;
             }
-            
-        } else {
-            if (!(section[ii].extendedFade)) {
-                if (section[ii].mode == 0) {
+        }
+        
+    } else { // top
+        if (!(section[ii].extendedFade)) {  // if extendedFade is not enabled yet for this section
+            //check if mode's regular level is max and if so enable extendedFade
+            switch(section[ii].mode) {
+                case(0): // white 
                     if (section[ii].RGBW[3] >= 1) {
                         section[ii].extendedFade = true;
                     } // else hasn't hit max yet
-                } else if (section[ii].mode == (1 || 2)) {
+                break;
+
+                case(1): // RGB Smooth
+                case(2): // RGB Sudden
                     if (section[ii].masterLevel >= 1) {
                         section[ii].extendedFade = true;
                     } // else hasn't hit max yet
-                } else if (section[ii].mode == (4 || 5 || 6)) {
-                    if (section[ii].RGBW[section[ii].mode - 4] >= 1) {
+                break;
+
+                case(3): // max brightness
+                    //no change
+                break;
+
+                case(4): // Red
+                case(5): // Green
+                case(6): // Blue
+                    if (section[ii].RGBW[section[ii].mode-4] >= 1) {
                         section[ii].extendedFade = true;
                     } // else hasn't hit max yet
-                }
+                break;
+
+                case(7): // Combined
+                    //if fading up and any of these hit max, we're at max. So enable extended fade
+                    if ( (section[ii].RGBW[0] >= 1) || (section[ii].RGBW[1] >= 1) || (section[ii].RGBW[2] >= 1) ) {
+                        section[ii].extendedFade = true;
+                    } // else hasn't hit max yet
+                break;
             }
         }
     }
@@ -134,15 +165,16 @@ void topAction1press(uint8_t ii) {
 
 // DOUBLE PRESS TOP: turn on and switch to next mode.
 void topAction2presses(uint8_t ii) {
-    section[ii].mode ++;
-    if (section[ii].mode >= 5)  // +1 to adjust for the previous line happening before instead of after
+    if (section[ii].mode >= 4) {  // +1 to adjust for the previous line happening before instead of after
+        section[ii].mode ++;
         if (section[ii].mode > MAX_MODE_SINGLE_COLOR)
             section[ii].mode = 4;
-
-    else 
+    }
+    else {
+        section[ii].mode ++;
         if (section[ii].mode >= NUM_OF_MODES_CYCLE)
             section[ii].mode = 0;
-    
+    }
     switchMode(ii);
 }
 
@@ -187,15 +219,19 @@ void botAction1press(uint8_t n) {
 // DOUBLE PRESS BOT: from off: do nothing
 void botAction2presses(uint8_t ii) {
     if (section[ii].isOn) {
-        section[ii].mode --;
-        if (section[ii].mode >= 3)    // -1 to adjust for previous line happening before instead of after
+        
+        if (section[ii].mode >= 4) { // -1 to adjust for previous line happening before instead of after
+            section[ii].mode --;
             if (section[ii].mode < 4) 
                 section[ii].mode = MAX_MODE_SINGLE_COLOR;
             
-        else       // mode is 0-3
+        }   
+            
+        else {      // mode is 0-3
+            section[ii].mode --;
             if (section[ii].mode < 0) 
                 section[ii].mode = NUM_OF_MODES_CYCLE - 1;
-            
+        } 
         switchMode(ii);
     
     } //else do nothing from off
