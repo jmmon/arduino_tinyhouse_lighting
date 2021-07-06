@@ -209,3 +209,80 @@ double press and hold on white fades ALL sets with white? or all?
 
 
 
+Brightness variables:
+
+Master level - controls all light  (set to 1 by default so basically is ignored)
+
+    White level - controls W
+
+    Color level - controls RGB
+        R level
+        G level
+        B level
+
+So:
+    masterLevel
+    RGBL[4] => r, g, b, colorLevel
+    W => white
+
+Or:
+    masterLevel
+    colorLevel
+    RGBW[4]
+
+
+Add mode 0 for off? (use turn off light section function)
+
+Mode:   required:        fade options:  
+    0       ww      Reg: white || master                        
+            RGBWW:  Ext: color || RGB
+
+    1/2     RGB     Reg: color || master
+            RGBWW   Ext: white
+
+    (3       N/A)
+
+    4/5/6   RGB     Reg: RGB || color || master
+            RGBWW   Ext: white
+
+    7       RGB     Reg: color || master
+            RGBWW   Ext: white
+
+master as main fade ctrl:       
+    modes: ALL
+
+White as extension:             color || RGB (individuals) as extension:
+    modes: 1,2,4,5,6,7              mode: 0
+
+So no need for "color" variable!
+
+*************************************************************************************
+
+
+
+Revised:
+    Mode:   required:        fade options:  
+        0       ww      Reg: master (|| white)
+                RGBWW:  Ext: RGB
+
+        1/2     RGB     Reg: master
+                RGBWW   Ext: white
+
+        (3       N/A)
+
+        4/5/6   RGB     Reg: master (|| RGB)
+                RGBWW   Ext: white
+
+        7       RGB     Reg: master
+                RGBWW   Ext: white
+
+
+
+*************************************************************************************
+
+Modes using masterLevel as main fade ctrl:      ALL!
+
+White as extension:             color || RGB (individuals) as extension:
+    modes: 1,2,4-7              mode: 0
+
+Mode without extension:     3

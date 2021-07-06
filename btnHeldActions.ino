@@ -1,38 +1,32 @@
+const float FADE_AMOUNT = 0.005;      // base fade adjustment; modified by section[].BRIGHTNESS_FACTOR
+const uint8_t COLOR_LOOP_DELAY_CTR_INT = 5;    // 5 * 20ms (main loop time) per adjustment
+uint16_t colorLoopDelayCtr = 0;
+
+
 void btnHeldActions(uint8_t ii, uint8_t bb) {   // happens every loop while held
     if (!(section[ii]._btn[bb]->isHeld))
         section[ii]._btn[bb]->isHeld = true;
 
-    //if max brightness when fading up, enable extended fade
-    //(if min brightness when fading down, disable extended fade)
-    
+    // disable extended fade while fading down (fades from extended thru to off)
+    if (bb == 0) { // bottom, fade down
+        disableExtendedFade(ii);
+    }
 
     if (bb == 1) {
-        switch (section[ii]._btn[bb]->pressCt) {
-            case (3):
-                btnTopHeld3p(ii);
-            break;
-
-            case (2):
-                btnTopHeld2p(ii);
-            break;
-
-            case (1):
-                btnTopHeld1p(ii);
-            break;
+        if (section[ii]._btn[bb]->pressCt == 3) {
+            btnTopHeld3p(ii);
+        } else if (section[ii]._btn[bb]->pressCt == 2) {
+            btnTopHeld2p(ii);
+        } else if (section[ii]._btn[bb]->pressCt == 1) {
+            btnTopHeld1p(ii);
         }
-    } else {// b == 0
-        switch (section[ii]._btn[bb]->pressCt) {
-            case (3):
-                btnBotHeld3p(ii);
-            break;
-
-            case (2):
-                btnBotHeld2p(ii);
-            break;
-
-            case (1):
-                btnBotHeld1p(ii);
-            break;
+    } else { // b == 0
+        if (section[ii]._btn[bb]->pressCt == 3) {
+            btnBotHeld3p(ii);
+        } else if (section[ii]._btn[bb]->pressCt == 2) {
+            btnBotHeld2p(ii);
+        } else if (section[ii]._btn[bb]->pressCt == 1) {
+            btnBotHeld1p(ii);
         }
     }
 }
@@ -44,31 +38,37 @@ void btnHeldActions(uint8_t ii, uint8_t bb) {   // happens every loop while held
 
 
 void btnTopHeld1p(uint8_t ii) {
-    if (!(section[ii].isOn)) {  // if turning on from off
+    if (!(section[ii].isOn)) {  // if turning on from off (usually mode==0 but sometimes mode==4||5||6)
         section[ii].isOn = true;
-        section[ii].colorProgress = false;
         if (section[ii].mode == 0) {
             section[ii].RGBWon[3] = true;
-        } else if (section[ii].mode == (4 || 5 || 6)) {
+        } else if (section[ii].mode == 4 || section[ii].mode == 5 || section[ii].mode == 6) {
             section[ii].RGBWon[section[ii].mode-4] = true;
         }
     }
     
+    
+    // float tempSpeed = FADE_AMOUNT; // regular fade increment
+    // uint8_t increment = uint8_t( (currentTime - section[ii]._btn[1]->timePressed) / BTN_FADE_DELAY ) - 1;   //should be 2, 1, 0; hopefully rounds
+    // while (increment > 0 && increment < 6) {
+    //     tempSpeed = FADE_AMOUNT * 2; // double amount after double time
+    //     increment--;
+    // }
+
+
     float tempSpeed = FADE_AMOUNT; // regular fade increment
-    if (currentTime >= (section[ii]._btn[0]->timePressed + (BTN_FADE_DELAY * 3))) 
-        tempSpeed = FADE_AMOUNT * 2 * 2; // quadruple amount after triple time
-
-    else if (currentTime >= (section[ii]._btn[0]->timePressed + (BTN_FADE_DELAY * 2))) 
+    
+    if (currentTime >= (section[ii]._btn[1]->timePressed + (BTN_FADE_DELAY * 3))) {
+        tempSpeed = FADE_AMOUNT * 2 * 2; // double a second time for triple time (so FADE_AMOUNT * (2*2))
+    } else if (currentTime >= (section[ii]._btn[1]->timePressed + (BTN_FADE_DELAY * 2))) {
         tempSpeed = FADE_AMOUNT * 2; // double amount after double time
-
-
+    }
 
     if (section[ii].mode == 0) { // white
         if (section[ii].extendedFade) {
-            fadeIncrement(ii, tempSpeed, 0);
-            fadeIncrement(ii, tempSpeed, 1);
-            fadeIncrement(ii, tempSpeed, 2);
-
+            for (uint8_t color = 0; color < 3; color++) {
+                fadeIncrement(ii, tempSpeed, color); // rgb
+            }
         } else {
             fadeIncrement(ii, tempSpeed, 3);
         }
@@ -76,7 +76,6 @@ void btnTopHeld1p(uint8_t ii) {
     } else if (section[ii].mode == 1 || section[ii].mode == 2 || section[ii].mode == 7) { // rgb smooth, sudden, combined
         if (section[ii].extendedFade) {
             fadeIncrement(ii, tempSpeed, 3);
-            
         } else {
             masterFadeIncrement(ii, tempSpeed);
         }
@@ -84,12 +83,11 @@ void btnTopHeld1p(uint8_t ii) {
     } else if (section[ii].mode == 3) {
         masterFadeIncrement(ii, tempSpeed);
 
-    }else if (section[ii].mode == 4 || section[ii].mode == 5 || section[ii].mode == 6) { // r, g, b
+    } else if (section[ii].mode == 4 || section[ii].mode == 5 || section[ii].mode == 6) { // r, g, b
         if (section[ii].extendedFade) {
             fadeIncrement(ii, tempSpeed, 3);
-
         } else {
-            fadeIncrement(ii, tempSpeed, section[ii].RGBW[section[ii].mode-4]);
+            fadeIncrement(ii, tempSpeed, section[ii].mode-4);
         }
     }
 }
@@ -127,10 +125,9 @@ void btnBotHeld1p(uint8_t ii) {
 
     if (section[ii].mode == 0) { // white
         if (section[ii].extendedFade) {
-            fadeDecrement(ii, tempSpeed, 0); // r
-            fadeDecrement(ii, tempSpeed, 1); // g
-            fadeDecrement(ii, tempSpeed, 2); // b
-
+            for (uint8_t color = 0; color < 3; color++) {
+                fadeDecrement(ii, tempSpeed, color); // rgb
+            }
         } else {
             fadeDecrement(ii, tempSpeed, 3); // w
         }
@@ -138,7 +135,6 @@ void btnBotHeld1p(uint8_t ii) {
     } else if (section[ii].mode == 1 || section[ii].mode == 2 || section[ii].mode == 7) { // RGB smooth, sudden, combined
         if (section[ii].extendedFade) {
             fadeDecrement(ii, tempSpeed, 3);
-
         } else {
             masterFadeDecrement(ii, tempSpeed);
         }
@@ -149,9 +145,8 @@ void btnBotHeld1p(uint8_t ii) {
     } else if (section[ii].mode == 4 || section[ii].mode == 5 || section[ii].mode == 6) { //r, g, b
         if (section[ii].extendedFade) {
             fadeDecrement(ii, tempSpeed, 3);
-
         } else {
-            fadeDecrement(ii, tempSpeed, section[ii].RGBW[section[ii].mode-4]);
+            fadeDecrement(ii, tempSpeed, section[ii].mode-4);
         }
     }
 }

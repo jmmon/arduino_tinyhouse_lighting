@@ -1,11 +1,29 @@
+const float DEFAULT_BRIGHTNESS = 0.60; // 0-1 (percent) value for default brightness when turned on
+const uint8_t COLOR_LOOP_SMOOTH_DELAY_INT = 20; //ms
+const uint16_t COLOR_LOOP_SUDDEN_DELAY_INT = 3000; //ms
+const float COLOR_LOOP_FADE_AMOUNT = 0.001;  // brightness adjust amount per tick
+
+const float _HIGH = 0.95,
+             _MID =  0.85,
+             _LOW = 0.60;
+const uint8_t MAX_COLOR_STATE = 12;
+const float RED_LIST[MAX_COLOR_STATE] =   {1., _HIGH,  _MID, _LOW,     0, 0,       0, 0,           0, _LOW,    _MID, _HIGH },
+            GREEN_LIST[MAX_COLOR_STATE] = {0, _LOW,    _MID, _HIGH,    1., _HIGH,  _MID, _LOW,     0, 0,       0, 0        },
+            BLUE_LIST[MAX_COLOR_STATE] =  {0, 0,       0, 0,           0, _LOW,    _MID, _HIGH,    1., _HIGH,  _MID, _LOW};
+// const uint8_t MAX_COLOR_STATE = 6;
+// const float RED_LIST[] = {1., _MID, 0, 0, 0, _MID};
+// const float GREEN_LIST[] = {0, _MID, 1., _MID, 0, 0};
+// const float BLUE_LIST[] = {0, 0, 0, _MID, 1., _MID};
+
+
 void turnOffSection(uint8_t ii) {
     section[ii].isOn = false; // if "on," set to "off"
     section[ii].mode = 0;
     section[ii].colorProgress = false;
 
-    for (uint8_t z = 0; z < 4; z++) {
-        section[ii].RGBW[z] = 0; // and set values to 0 for each color for that light
-        section[ii].RGBWon[z] = false;
+    for (uint8_t color = 0; color < 4; color++) {
+        section[ii].RGBW[color] = 0; // and set values to 0 for each color for that light
+        section[ii].RGBWon[color] = false;
     }
     //save masterLevel so that next time it can be used as the starting point?
     section[ii].lastMasterLevel = section[ii].masterLevel;
@@ -13,6 +31,52 @@ void turnOffSection(uint8_t ii) {
     updateLights(ii);
 }
 
+void extendedFade(uint8_t ii) {
+    if (!(section[ii].extendedFade)) {  // if extendedFade is not enabled yet for this section
+        //check if mode's regular level is max and if so enable extendedFade
+        if (section[ii].mode == 0) { // white 
+            if (section[ii].RGBW[3] >= 1) {
+                section[ii].extendedFade = true;
+            } // else hasn't hit max yet
+        } else if (section[ii].mode == 3) { // max brightness 
+            // do nothing
+        } else if (section[ii].mode == 1 || section[ii].mode == 2) {
+                // RGB Smooth // RGB Sudden
+            if (section[ii].masterLevel >= 1) {
+                section[ii].extendedFade = true;
+            } // else hasn't hit max yet
+        } else if (section[ii].mode == 4 || section[ii].mode == 5 || section[ii].mode == 6 ) { // Red // Green // Blue
+            if (section[ii].RGBW[section[ii].mode-4] >= 1) {
+                section[ii].extendedFade = true;
+            } // else hasn't hit max yet
+        } else if ( section[ii].mode == 7 ) { // Combined
+            //if fading up and any of these hit max, we're at max. So enable extended fade
+            if ( section[ii].masterLevel >= 1 ) {
+                section[ii].extendedFade = true;
+            } // else hasn't hit max yet
+        }
+    }
+}
+
+void disableExtendedFade(uint8_t ii) {
+    if (section[ii].extendedFade) {
+        //check if mode's extended level is max and if so disable extendedFade
+        if (section[ii].mode == 0) { // white 
+            // if rgb are 0, disable extended fade
+            if ( section[ii].RGBW[0] <= 0 && section[ii].RGBW[1] <= 0 && section[ii].RGBW[2] <= 0 ) {
+                section[ii].extendedFade = false;
+            } // else hasn't hit min yet
+        } else if (section[ii].mode == 3) { // max brightness 
+            //do nothing
+        } else if (section[ii].mode == 1 || section[ii].mode == 2 || section[ii].mode == 4 || section[ii].mode == 5 || section[ii].mode == 6 || section[ii].mode == 7 ) { 
+            // Red // Green // Blue // Combined // RGB Smooth // RGB Sudden
+            // white is extended fade, wait for this to be off
+            if (section[ii].RGBW[3] <= 0) {
+                section[ii].extendedFade = false;
+            } // else hasn't hit min yet
+        }
+    }
+}
 
 void switchMode(uint8_t nn) {
     if (DEBUG) {
@@ -25,9 +89,9 @@ void switchMode(uint8_t nn) {
     switch (section[nn].mode) {
         case (0): // to: white,  from: RGB smooth
             section[nn].colorProgress = false;
-            for (uint8_t z = 0; z < 4; z++) {
-                section[nn].RGBW[z] = 0;
-                section[nn].RGBWon[z] = false;
+            for (uint8_t color = 0; color < 4; color++) {
+                section[nn].RGBW[color] = 0;
+                section[nn].RGBWon[color] = false;
             }
             
             section[nn].RGBW[3] = section[nn].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
@@ -49,8 +113,8 @@ void switchMode(uint8_t nn) {
 
                 section[nn].RGBW[3] = 0;
                 section[nn].RGBWon[3] = false;
-                for (uint8_t z = 0; z < 3; z++) {
-                    section[nn].RGBWon[z] = true;
+                for (uint8_t color = 0; color < 3; color++) {
+                    section[nn].RGBWon[color] = true;
                 }
                 section[nn].masterLevel = section[nn].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
 
@@ -70,9 +134,9 @@ void switchMode(uint8_t nn) {
         break;
         
         case (3):   //max brightness
-            for (uint8_t z = 0; z < 4; z++) {
-                section[nn].RGBW[z] = 1;
-                section[nn].RGBWon[z] = true;
+            for (uint8_t color = 0; color < 4; color++) {
+                section[nn].RGBW[color] = 1;
+                section[nn].RGBWon[color] = true;
             }
                 
             section[nn].masterLevel = 1;
@@ -81,22 +145,20 @@ void switchMode(uint8_t nn) {
         case (4):
         case (5):
         case (6):
-            section[nn].singleColorMode = true; //not needed?
 
-            section[nn].RGBW[3] = 0; //clear white
-            for (uint8_t z = 0; z < 4; z++) { //clear rgbw
-                // dont clear section[nn].RGBW[z]
-                section[nn].RGBWon[z] = false;
+            section[nn].masterLevel = 1;
+
+            for (uint8_t color = 0; color < 4; color++) {
+                section[nn].RGBWon[color] = false;
             }
             
-            section[nn].masterLevel = 1;
-            section[nn].RGBW[section[nn].mode-4] = 0.1;     // turn on color to 10%
+            section[nn].RGBW[section[nn].mode-4] = section[nn].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS * 2 / 3;
             section[nn].RGBWon[section[nn].mode-4] = true;
         break;
 
         case (7):
-            for (uint8_t z = 0; z < 3; z++) {
-                section[nn].RGBWon[z] = true;
+            for (uint8_t color = 0; color < 3; color++) {
+                section[nn].RGBWon[color] = true;
             }
             section[nn].masterLevel = section[nn].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
         break;
@@ -104,102 +166,133 @@ void switchMode(uint8_t nn) {
 
     if ((section[nn].mode != 1) && (section[nn].mode != 2)) {
         updateLights(nn);
-    }
-    //updateLights(nn);
-    
+    }    
 }
 
 void updateLights(uint8_t i) { // updates a specific light section
     if (DEBUG) {
-        updateLightsDEBUG(i);
+        DEBUG_updateLights(i);
 
     } else {
         uint8_t brightnessValue; // index for brightness lookup table
 
-        for (uint8_t z = 0; z < 4; z++) {
-            if (section[i].RGBWon[z]) {
-                uint8_t height = (uint16_t(section[i].RGBW[z] * section[i].masterLevel * TABLE_SIZE) / HEIGHT);
-                uint8_t width = (uint16_t(section[i].RGBW[z] * section[i].masterLevel * TABLE_SIZE) % WIDTH);
+        for (uint8_t color = 0; color < 4; color++) {
+            if (section[i].RGBWon[color]) {
+                uint8_t height = (uint16_t(section[i].RGBW[color] * section[i].masterLevel * TABLE_SIZE) / HEIGHT);
+                uint8_t width = (uint16_t(section[i].RGBW[color] * section[i].masterLevel * TABLE_SIZE) % WIDTH);
 
                 // look up brighness from table and saves as uint8_t brightness ( sizeof(brightness) resolves to 1 [byte of data])
                 memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); 
 
-                if ((section[i].RGBW[z] > 0) && (section[i].masterLevel > 0) && (brightnessValue == 0)) 
+                if ((section[i].RGBW[color] > 0) && (section[i].masterLevel > 0) && (brightnessValue == 0)) 
                     brightnessValue = 1;
                     
-                DmxSimple.write(section[i].DMX_OUT * 8 - 8 + (z * 2 + 1), brightnessValue);
-                DmxSimple.write(section[i].DMX_OUT * 8 - 8 + (z * 2 + 1), brightnessValue);
-                section[i].lastRGBW[z] = section[i].RGBW[z];
+                DmxSimple.write(section[i].DMX_OUT * 8 - 8 + (color * 2 + 1), brightnessValue);
+                DmxSimple.write(section[i].DMX_OUT * 8 - 8 + (color * 2 + 1), brightnessValue);
+                section[i].lastRGBW[color] = section[i].RGBW[color];
                 
             } else {
-                //light is off, so turn it off
-                DmxSimple.write(section[i].DMX_OUT * 8 - 8 + (z * 2 + 1), 0);
-                DmxSimple.write(section[i].DMX_OUT * 8 - 8 + (z * 2 + 1), 0);
-                section[i].lastRGBW[z] = section[i].RGBW[z];
-                section[i].RGBW[z] = 0;6
+                // light is off, so turn it off
+                DmxSimple.write(section[i].DMX_OUT * 8 - 8 + (color * 2 + 1), 0);
+                DmxSimple.write(section[i].DMX_OUT * 8 - 8 + (color * 2 + 1), 0);
+                section[i].lastRGBW[color] = section[i].RGBW[color];
             }
         }
     }
-    
-
-    
+        
     if ( section[i].RGBW[0] <= 0 && section[i].RGBW[1] <= 0 && section[i].RGBW[2] <= 0 && section[i].RGBW[3] <= 0 ) {
         section[i].isOn = false;
         section[i].masterLevel = 0;
 
-        for (uint8_t z = 0; z < 4; z++) {  //clear rgbw
-            section[i].RGBW[z] = 0;
-            section[i].RGBWon[z] = false;
+        for (uint8_t color = 0; color < 4; color++) {  //clear rgbw
+            section[i].RGBW[color] = 0;
+            section[i].RGBWon[color] = false;
         }
 
         if (DEBUG) {
-            updateLightsOffDEBUG(i);
+            DEBUG_updateLightsOff(i);
         }
     }
 }
 
-
+// void fadeUp(uint8_t i, bool goUp, bool master, float f, uint8_t color) {
+//     if (master) {
+//         if (goUp) {
+//             //masterFadeIncrement
+//             section[i].isOn = true;
+//             if (section[i].masterLevel < (1 - section[i].BRIGHTNESS_FACTOR * f)) {
+//                 section[i].masterLevel += section[i].BRIGHTNESS_FACTOR * f;
+//             } else {
+//                 section[i].masterLevel = 1; // max
+//             }
+//         } else {
+//             //masterFadeDecrement
+//             if (section[i].masterLevel > (section[i].BRIGHTNESS_FACTOR * f)) {
+//                 section[i].masterLevel -= section[i].BRIGHTNESS_FACTOR * f;
+//             } else {
+//                 section[i].isOn = false;
+//                 section[i].masterLevel = 0; // min
+//             }
+//         }
+//     } else { //regular
+//         if (goUp) {
+//             //regular increment
+//             section[i].RGBWon[color] = true;
+//             if (section[i].RGBW[color] < (1 - section[i].BRIGHTNESS_FACTOR * f)) {
+//                 section[i].RGBW[color] += section[i].BRIGHTNESS_FACTOR * f;
+//             } else {
+//                 section[i].RGBW[color] = 1; // max
+//             }
+//         } else {
+//             //regular decrement
+//             if (section[i].RGBW[color] > (section[i].BRIGHTNESS_FACTOR * f)) {
+//                 section[i].RGBW[color] -= section[i].BRIGHTNESS_FACTOR * f;
+//             } else {
+//                 section[i].RGBWon[color] = false;
+//                 section[i].RGBW[color] = 0; // min
+//             }
+//         }
+//     }
+//     updateLights(i);
+// }
 
 
 void masterFadeIncrement(uint8_t i, float f) {
-    if (section[i].masterLevel < (1 - section[i].BRIGHTNESS_FACTOR * f))
+    section[i].isOn = true;
+    if (section[i].masterLevel < (1 - section[i].BRIGHTNESS_FACTOR * f)) {
         section[i].masterLevel += section[i].BRIGHTNESS_FACTOR * f;
-
-    else
+    } else {
         section[i].masterLevel = 1; // max
+    }
+    updateLights(i);
+}
+void fadeIncrement(uint8_t i, float f, uint8_t color) {
+    section[i].RGBWon[color] = true;
+    if (section[i].RGBW[color] < (1 - section[i].BRIGHTNESS_FACTOR * f)) {
+        section[i].RGBW[color] += section[i].BRIGHTNESS_FACTOR * f;
+    } else {
+        section[i].RGBW[color] = 1; // max
+    }
     
     updateLights(i);
 }
 
 void masterFadeDecrement(uint8_t i, float f) {
-    if (section[i].masterLevel > (section[i].BRIGHTNESS_FACTOR * f))
+    if (section[i].masterLevel > (section[i].BRIGHTNESS_FACTOR * f)) {
         section[i].masterLevel -= section[i].BRIGHTNESS_FACTOR * f;
-
-    else
+    } else {
+        section[i].isOn = false;
         section[i].masterLevel = 0; // min
-    
+    }
     updateLights(i);
 }
-
-
-
-void fadeIncrement(uint8_t i, float f, uint8_t z) {
-    if (section[i].RGBW[z] < (1 - section[i].BRIGHTNESS_FACTOR * f))
-        section[i].RGBW[z] += section[i].BRIGHTNESS_FACTOR * f;
-
-    else
-        section[i].RGBW[z] = 1; // max
-    
-    updateLights(i);
-}
-
-void fadeDecrement(uint8_t i, float f, uint8_t z) {
-    if (section[i].RGBW[z] > (section[i].BRIGHTNESS_FACTOR * f))
-        section[i].RGBW[z] -= section[i].BRIGHTNESS_FACTOR * f;
-
-    else
-        section[i].RGBW[z] = 0; // min
-    
+void fadeDecrement(uint8_t i, float f, uint8_t color) {
+    if (section[i].RGBW[color] > (section[i].BRIGHTNESS_FACTOR * f)) {
+        section[i].RGBW[color] -= section[i].BRIGHTNESS_FACTOR * f;
+    } else {
+        section[i].RGBWon[color] = false;
+        section[i].RGBW[color] = 0; // min
+    }
     updateLights(i);
 }
 
