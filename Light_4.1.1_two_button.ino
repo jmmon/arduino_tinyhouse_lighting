@@ -15,12 +15,20 @@ const uint8_t   KITCHEN_BTN_PIN  =   A3,
                 //const uint8_t SCONCE_BUTTON_PIN = A2;
                 //const uint8_t BACKWALL_BUTTON_PIN = A5;
 
-const uint8_t LOOP_DELAY_INTERVAL = 20;     // refresh speed in ms   {for ms=1: factor=0.00001; amount=0.018}
-const uint8_t BTN_FADE_DELAY = 230;          // minimum time the button must be held to start "held" action;
-const uint16_t BTN_RELEASE_TIMER = 250;      // time allowed between release and next press for multipresses
+const uint8_t LOOP_DELAY_INTERVAL = 20;     // refresh speed in ms
+const uint8_t BTN_FADE_DELAY = 230;         // time held before "held actions"
+const uint16_t BTN_RELEASE_TIMER = 250;     // wait time before actions, to detect multi-press
 uint32_t loopStartTime = 0;
 uint32_t currentTime = 0;
 
+const uint8_t MAX_PRESS_COUNT = 3;              // single, double, triple press
+
+const uint8_t LOW_CYCLE_STARTS_AT = 1;      // (index) white
+const uint8_t NUM_OF_MODES_IN_CYCLE_LOW = 3;
+const uint8_t HIGH_CYCLE_STARTS_AT = 5;     // (index) red
+const uint8_t NUM_OF_MODES_IN_CYCLE_HIGH = 4;    // red==4, green==5, blue==6, TODO: combined==7;
+
+const uint8_t SINGLE_COLOR_MODE_OFFSET = 5;
 
 struct btn_t {
     uint32_t timeReleased; //when was this button released?
@@ -141,7 +149,7 @@ void setup() {
     for (uint8_t i = 0; i < SECTION_COUNT; i++) 
         pinMode(section[i].PIN, INPUT);
     
-    randomSeed(analogRead(0)); //get random seed; used to start colorProgress state at a random color
+    randomSeed(analogRead(0)); // used to start colorProgress state at a random color
     loopStartTime = millis();
     currentTime = loopStartTime;
 
@@ -163,57 +171,44 @@ void loop() {
     currentTime = millis();
 
     for (uint8_t i = 0; i < SECTION_COUNT; i++) {
-        
         if (section[i].colorProgress) {
-
-            if (currentTime >= (section[i].colorStartTime + section[i].colorDelayInt)) {
-
+            if (currentTime >= (section[i].colorStartTime + section[i].colorDelayInt)) { //loop is separate for this, so speed change works well
                 section[i].colorStartTime += section[i].colorDelayInt;
-
-                if (section[i].mode == 2) 
+                if (section[i].mode == (LOW_CYCLE_STARTS_AT + 2)) 
                     progressColorSudden(i);
-
-                else if (section[i].mode == 1) 
+                else if (section[i].mode == (LOW_CYCLE_STARTS_AT + 1)) 
                     progressColorSmooth(i);
             }
         }
     }
 
     if (currentTime >= (loopStartTime + LOOP_DELAY_INTERVAL)) {
-
         loopStartTime += LOOP_DELAY_INTERVAL; // set time for next timer
 
         for (uint8_t i = 0; i < SECTION_COUNT; i++) {
-
             uint16_t btnStatus = analogRead(section[i].PIN);
 
             for (uint8_t b = 0; b < 2; b++) {       // 2 buttons, bottom and top (0 and 1)s
 
                 if (btnStatus <= 255) {      // if no button is pressed:
-
                     if (section[i]._btn[b]->timePressed > 0) {
                         // "register" a release of a button
                         section[i]._btn[b]->timePressed = 0; // reset
                         section[i]._btn[b]->timeReleased = currentTime; // save the time
                     }
-
                     else if ((section[i]._btn[b]->timeReleased != 0) && (currentTime >= (section[i]._btn[b]->timeReleased + BTN_RELEASE_TIMER))) 
                         btnActions(i, b); // after small wait
                     
-                } else      // else btnStatus > 255: register press and/or do "held button" actions
-
-                if ((btnStatus >= (BTN_RESIST[b] - BTN_RESIST_TOLERANCE)) && (btnStatus <= (BTN_RESIST[b] + BTN_RESIST_TOLERANCE))) {
+                } else if ((btnStatus >= (BTN_RESIST[b] - BTN_RESIST_TOLERANCE)) && (btnStatus <= (BTN_RESIST[b] + BTN_RESIST_TOLERANCE))) { // else btnStatus > 255: register press and/or do "held button" actions
 
                     if (DEBUG) {
                         DEBUG_heldActions(i, b, btnStatus);
                     }
-                    
                     if (section[i]._btn[b]->timePressed == 0) {
                         // "register" a press of a button
                         section[i]._btn[b]->pressCt++;      // count the press
                         section[i]._btn[b]->timePressed = currentTime; // save the time
-                    }
-
+                    } 
                     else if (currentTime >= (section[i]._btn[b]->timePressed + BTN_FADE_DELAY)) 
                         btnHeldActions(i, b);
 

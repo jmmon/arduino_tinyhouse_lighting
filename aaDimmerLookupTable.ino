@@ -45,3 +45,23 @@ const uint8_t DIMMER_LOOKUP_TABLE[HEIGHT][WIDTH] PROGMEM = {
 { 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, },
 { 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, },
 };
+
+
+uint8_t lookupTable(uint8_t ii, uint8_t ccolor) {
+    uint8_t temp = 0;
+
+    uint8_t height = (uint16_t(section[ii].RGBW[ccolor] * section[ii].masterLevel * TABLE_SIZE) / HEIGHT);
+    uint8_t width = (uint16_t(section[ii].RGBW[ccolor] * section[ii].masterLevel * TABLE_SIZE) % WIDTH);
+
+    // look up brighness from table and saves as temp ( sizeof(temp) resolves to 1 [byte of data])
+    memcpy_P(&temp, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(temp)); 
+
+    if ((section[ii].RGBW[ccolor] > 0) && (section[ii].masterLevel > 0) && (temp == 0)) 
+        temp = 1;
+    
+    if (DEBUG) {
+        Serial.print(F("table_w:"));    Serial.print(width);
+        Serial.print(F(", table_h:"));  Serial.print(height);
+    }
+    return temp;
+}

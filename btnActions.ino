@@ -1,8 +1,3 @@
-const uint8_t MAX_PRESS_COUNT = 3;              // single, double, triple press
-const uint8_t MAX_MODE_SINGLE_COLOR = 7;    // red==4, green==5, blue==6, TODO: combined==7;
-const uint8_t NUM_OF_MODES_CYCLE = 3;
-
-
 void btnActions(uint8_t ii, uint8_t bb) {
     // happens after a short delay following a button release
     section[ii]._btn[bb]->timeReleased = 0;
@@ -69,28 +64,26 @@ void btnActions(uint8_t ii, uint8_t bb) {
 // PRESS TOP from   RGB :   pause colorProgress
 void topAction1press(uint8_t ii) {
     if (section[ii].isOn) { // from on:
-        if (section[ii].mode == 1 || section[ii].mode == 2) { //rgb, rgb
+        if (section[ii].mode == (LOW_CYCLE_STARTS_AT + 1) || section[ii].mode == (LOW_CYCLE_STARTS_AT + 2)) { //rgb, rgb
             // pause colorProgress
             section[ii].colorProgress = !section[ii].colorProgress;
+        } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) { // r, g, b
+            section[ii].RGBW[section[ii].mode-SINGLE_COLOR_MODE_OFFSET] += 0.2;
+            if (section[ii].RGBW[section[ii].mode-SINGLE_COLOR_MODE_OFFSET] > 1)
+                section[ii].RGBW[section[ii].mode-SINGLE_COLOR_MODE_OFFSET] = 1;
+
         } else {
-
-
-            // need reworking? to use something other than masterLevel? Not sure. Working well for now!
-
-
             // for other modes, cycle up brightness for colors that are on
             section[ii].masterLevel += 0.2;
-
             if (section[ii].masterLevel > 1)
                 section[ii].masterLevel = 1;
-
         }
-
+        
         updateLights(ii);
 
     } else { // from off:
         // TODO: use last brightness if available, else default brightness
-        section[ii].mode = 0;
+        section[ii].mode = LOW_CYCLE_STARTS_AT;
         switchMode(ii);
     }
 }
@@ -98,23 +91,23 @@ void topAction1press(uint8_t ii) {
 
 // DOUBLE PRESS TOP: turn on and switch to next mode.
 void topAction2presses(uint8_t ii) {
-    if (section[ii].mode >= 4) {
+    if (section[ii].mode >= HIGH_CYCLE_STARTS_AT) {     // CYCLE_HIGH
         section[ii].mode ++;
-        if (section[ii].mode > MAX_MODE_SINGLE_COLOR)
-            section[ii].mode = 4;
-    }
-    else {
+        if (section[ii].mode >= (HIGH_CYCLE_STARTS_AT + NUM_OF_MODES_IN_CYCLE_HIGH))
+            section[ii].mode = HIGH_CYCLE_STARTS_AT;
+
+    } else {                                            // CYCLE_LOW
         section[ii].mode ++;
-        if (section[ii].mode >= NUM_OF_MODES_CYCLE)
-            section[ii].mode = 0;
+        if (section[ii].mode >= (LOW_CYCLE_STARTS_AT + NUM_OF_MODES_IN_CYCLE_LOW) )
+            section[ii].mode = LOW_CYCLE_STARTS_AT;
     }
     switchMode(ii);
 }
 
 //  TRIPLE PRESS TOP: MAX BRIGHTNESS
-//from on/off (any mode): turn on max brightness
+// from on/off (any mode): turn on max brightness
 void topAction3presses(uint8_t ii, uint8_t bb) {
-    section[ii].mode = 3; // max brightness mode
+    section[ii].mode = (LOW_CYCLE_STARTS_AT + 3); // max brightness mode
     switchMode(ii);
 }
 
@@ -135,14 +128,17 @@ void botAction1press(uint8_t n) {
         if (DEBUG) {
             Serial.println(F(" BOT 1: Turn Off "));
         }
-        turnOffSection(n);
+        //turnOffSection(n);
+        section[n].mode = 0;
+        switchMode(n);
+        //add mode for turn off?
 
     } else { // turn on night light mode
         if (DEBUG) {
             Serial.println(F(" BOT 1: Red "));
         }
 
-        section[n].mode = 4;
+        section[n].mode = HIGH_CYCLE_STARTS_AT;
         switchMode(n);
     }
 }
@@ -151,46 +147,49 @@ void botAction1press(uint8_t n) {
 // DOUBLE PRESS BOT: from on: reduce mode by 1
 // DOUBLE PRESS BOT: from off: do nothing
 void botAction2presses(uint8_t ii) {
-    if (section[ii].isOn) {
-        
-        if (section[ii].mode >= 4) { // -1 to adjust for previous line happening before instead of after
+    if (section[ii].isOn) { // do nothing if off
+        if (section[ii].mode >= HIGH_CYCLE_STARTS_AT) { // if in the single color modes
             section[ii].mode --;
-            if (section[ii].mode < 4) 
-                section[ii].mode = MAX_MODE_SINGLE_COLOR;
+            if (section[ii].mode < HIGH_CYCLE_STARTS_AT)    // if under 5
+                section[ii].mode = (HIGH_CYCLE_STARTS_AT + NUM_OF_MODES_IN_CYCLE_HIGH - 1);   // 5 + 4 - 1 = 8
             
-        }   
-            
-        else {      // mode is 0-3
+        } else {      // mode is 1-3
             section[ii].mode --;
-            if (section[ii].mode < 0) 
-                section[ii].mode = NUM_OF_MODES_CYCLE - 1;
+            if (section[ii].mode < LOW_CYCLE_STARTS_AT) // if under 1
+                section[ii].mode = (LOW_CYCLE_STARTS_AT + NUM_OF_MODES_IN_CYCLE_LOW - 1);   //4 - 1 = 3
         } 
+
         switchMode(ii);
-    
-    } //else do nothing from off
+    }
 }
 
 
 void botAction3presses(uint8_t n, uint8_t m) {
     bool somethingElseIsOn = false;
-    for (uint8_t k = 0; k < SECTION_COUNT; k++) 
-        if (section[k].isOn && (k != 2)) 
+    for (uint8_t index = 0; index < SECTION_COUNT; index++) 
+        if (section[index].isOn && (index != 2)) 
             somethingElseIsOn = true;
 
     if (somethingElseIsOn) { // something else on, (porch on or off)
-        for (uint8_t k = 0; k < SECTION_COUNT; k++) // turn off everything except porch
-            if (section[k].isOn && (k != 2))
-                turnOffSection(k);
+        for (uint8_t index = 0; index < SECTION_COUNT; index++) // turn off everything except porch
+            if (section[index].isOn && (index != 2)) {
+                //turnOffSection(index);
+                section[index].mode = 0;
+                switchMode(index);
+            }
+                
 
     } else {
-        if (section[2].isOn) // nothing else on, porch on
-            turnOffSection(2);
-
+        if (section[2].isOn) { // nothing else on, porch on
+            //turnOffSection(2);
+            section[2].mode = 0;
+            switchMode(2);
+        }
         else // DISCO MODE // nothing else on, porch off
-            for (uint8_t k = 0; k < SECTION_COUNT; k++) {
-                // for each light, switch the mode to 2 (colorProgress sudden)
-                section[k].mode = 2;
-                switchMode(k);
+            for (uint8_t index = 0; index < SECTION_COUNT; index++) {
+                // for each light, switch the mode to (LOW_CYCLE_STARTS_AT + 2) (colorProgress sudden)
+                section[index].mode = (LOW_CYCLE_STARTS_AT + 2);
+                switchMode(index);
             }
     }
 }

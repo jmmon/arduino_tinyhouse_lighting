@@ -262,19 +262,32 @@ So no need for "color" variable!
 
 Revised:
     Mode:   required:        fade options:  
-        0       ww      Reg: master (|| white)
-                RGBWW:  Ext: RGB
+        0:       
+                w       Reg: master
+                RGBW:   Ext: RGB
+        1/2:
+                RGB     Reg: master
+                RGBW    Ext: white
+        4/5/6
+                RGB     Reg: RGB (save the levels)   // don't wipe rgb levels when in CYCLE_HIGH
+                RGBW    Ext: white
 
-        1/2     RGB     Reg: master
-                RGBWW   Ext: white
+        7: (on activation, take RGB values and normalize them to max and set the initial master brightness down to tune it to a level comparable to the previous RGB values)
+        
+                RGB     Reg: master
+                RGBW    Ext: white
 
-        (3       N/A)
+                        normalize:
+                            [highest, middle, low] = getHighest(r, g, b)
+                            masterLevel = highest
+                            low = low / highest     // if low was 0.01 and high was 0.05, low == 1/5 == 0.2
+                            middle = middle / highest // if middle was 0.02, middle == 2/5 == 0.4
+                            highest = 1         // highest now set to max
 
-        4/5/6   RGB     Reg: master (|| RGB)
-                RGBWW   Ext: white
+                            // now all are set to use master as fade
 
-        7       RGB     Reg: master
-                RGBWW   Ext: white
+        (3:      N/A )
+
 
 
 

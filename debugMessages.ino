@@ -1,16 +1,20 @@
 void DEBUG_updateLights(uint8_t ii) {
-    uint8_t brightnessValue; //index for brightness lookup table
+    //uint8_t brightnessValue = lookupTable(ii, 3); //index for brightness lookup table
+    uint8_t brightnessValue = 0; //index for brightness lookup table
+
     uint8_t height = (uint16_t(section[ii].RGBW[3] * section[ii].masterLevel * TABLE_SIZE) / HEIGHT);
     uint8_t width = (uint16_t(section[ii].RGBW[3] * section[ii].masterLevel * TABLE_SIZE) % WIDTH);
 
-    // looks up brighness from table and saves as uint8_t brightness ( sizeof(brightness) resolves to 1 [byte of data])
-    memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue));
-    
-    if ((section[ii].RGBW[3] > 0) && (section[ii].masterLevel > 0) && (brightnessValue == 0))
+    // look up brighness from table and saves as temp ( sizeof(temp) resolves to 1 [byte of data])
+    memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); 
+
+    if ((section[ii].RGBW[3] > 0) && (section[ii].masterLevel > 0) && (brightnessValue == 0)) 
         brightnessValue = 1;
+    
 
     Serial.print(F("table_w:"));    Serial.print(width);
     Serial.print(F(", table_h:"));  Serial.print(height);
+    
     Serial.print(F(" lvl:"));   Serial.print(brightnessValue);
     Serial.print(F(" W: "));    Serial.print(section[ii].RGBW[3]);
     Serial.print(F(" R: "));    Serial.print(section[ii].RGBW[0]);

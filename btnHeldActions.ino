@@ -38,24 +38,15 @@ void btnHeldActions(uint8_t ii, uint8_t bb) {   // happens every loop while held
 
 
 void btnTopHeld1p(uint8_t ii) {
-    if (!(section[ii].isOn)) {  // if turning on from off (usually mode==0 but sometimes mode==4||5||6)
+    if (!(section[ii].isOn)) {  // if fading up from off, turn "on" the correct light
         section[ii].isOn = true;
-        if (section[ii].mode == 0) {
-            section[ii].RGBWon[3] = true;
-        } else if (section[ii].mode == 4 || section[ii].mode == 5 || section[ii].mode == 6) {
-            section[ii].RGBWon[section[ii].mode-4] = true;
+        if (section[ii].mode == LOW_CYCLE_STARTS_AT) {
+            section[ii].RGBWon[3] = true; //white on
+        } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) {
+            section[ii].RGBWon[section[ii].mode-SINGLE_COLOR_MODE_OFFSET] = true;
         }
     }
     
-    
-    // float tempSpeed = FADE_AMOUNT; // regular fade increment
-    // uint8_t increment = uint8_t( (currentTime - section[ii]._btn[1]->timePressed) / BTN_FADE_DELAY ) - 1;   //should be 2, 1, 0; hopefully rounds
-    // while (increment > 0 && increment < 6) {
-    //     tempSpeed = FADE_AMOUNT * 2; // double amount after double time
-    //     increment--;
-    // }
-
-
     float tempSpeed = FADE_AMOUNT; // regular fade increment
     
     if (currentTime >= (section[ii]._btn[1]->timePressed + (BTN_FADE_DELAY * 3))) {
@@ -64,30 +55,26 @@ void btnTopHeld1p(uint8_t ii) {
         tempSpeed = FADE_AMOUNT * 2; // double amount after double time
     }
 
-    if (section[ii].mode == 0) { // white
-        if (section[ii].extendedFade) {
+    if (section[ii].mode == (LOW_CYCLE_STARTS_AT + 3)) { // max brightness
+        masterFadeIncrement(ii, tempSpeed);
+        //fadeIncrement(ii, tempSpeed, NULL);
+    } else if (section[ii].extendedFade) {
+        //extended fade
+        if (section[ii].mode == LOW_CYCLE_STARTS_AT) { // white
             for (uint8_t color = 0; color < 3; color++) {
                 fadeIncrement(ii, tempSpeed, color); // rgb
             }
         } else {
             fadeIncrement(ii, tempSpeed, 3);
         }
-
-    } else if (section[ii].mode == 1 || section[ii].mode == 2 || section[ii].mode == 7) { // rgb smooth, sudden, combined
-        if (section[ii].extendedFade) {
-            fadeIncrement(ii, tempSpeed, 3);
-        } else {
+    } else {
+        //regular fade
+        if (section[ii].mode == LOW_CYCLE_STARTS_AT || section[ii].mode == (LOW_CYCLE_STARTS_AT + 1) || section[ii].mode == (LOW_CYCLE_STARTS_AT + 2) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 3)) { // whhite, rgb smooth, sudden;  combined
             masterFadeIncrement(ii, tempSpeed);
-        }
+            //fadeIncrement(ii, tempSpeed, NULL);
 
-    } else if (section[ii].mode == 3) {
-        masterFadeIncrement(ii, tempSpeed);
-
-    } else if (section[ii].mode == 4 || section[ii].mode == 5 || section[ii].mode == 6) { // r, g, b
-        if (section[ii].extendedFade) {
-            fadeIncrement(ii, tempSpeed, 3);
-        } else {
-            fadeIncrement(ii, tempSpeed, section[ii].mode-4);
+        } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) { // r, g, b
+            fadeIncrement(ii, tempSpeed, section[ii].mode-SINGLE_COLOR_MODE_OFFSET);
         }
     }
 }
@@ -97,7 +84,7 @@ void btnTopHeld2p(uint8_t ii) {
 }
 
 void btnTopHeld3p(uint8_t ii) {
-    if ((section[ii].mode == 1) || (section[ii].mode == 2)) {
+    if ((section[ii].mode == (LOW_CYCLE_STARTS_AT + 1)) || (section[ii].mode == (LOW_CYCLE_STARTS_AT + 2))) {
         // speed up colorProgress (decrease delay)
         if (colorLoopDelayCtr == COLOR_LOOP_DELAY_CTR_INT) {   
             if (section[ii].colorDelayInt > 1)
@@ -123,30 +110,28 @@ void btnBotHeld1p(uint8_t ii) {
         tempSpeed = FADE_AMOUNT * 2; // double delay speed after double time
 
 
-    if (section[ii].mode == 0) { // white
-        if (section[ii].extendedFade) {
+
+    if (section[ii].mode == (LOW_CYCLE_STARTS_AT + 3)) { // max brightness
+        masterFadeDecrement(ii, tempSpeed);
+        //fadeDecrement(ii, tempSpeed, NULL);
+    } else if (section[ii].extendedFade) {
+        //extended fade
+        if (section[ii].mode == LOW_CYCLE_STARTS_AT) { // white
             for (uint8_t color = 0; color < 3; color++) {
                 fadeDecrement(ii, tempSpeed, color); // rgb
             }
         } else {
-            fadeDecrement(ii, tempSpeed, 3); // w
-        }
-
-    } else if (section[ii].mode == 1 || section[ii].mode == 2 || section[ii].mode == 7) { // RGB smooth, sudden, combined
-        if (section[ii].extendedFade) {
             fadeDecrement(ii, tempSpeed, 3);
-        } else {
+        }
+    } else {
+        //regular fade
+        if (section[ii].mode == LOW_CYCLE_STARTS_AT || section[ii].mode == (LOW_CYCLE_STARTS_AT + 1) || section[ii].mode == (LOW_CYCLE_STARTS_AT + 2) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 3)) { // rgb smooth, sudden, combined
             masterFadeDecrement(ii, tempSpeed);
-        }
+            //fadeDecrement(ii, tempSpeed, NULL);
 
-    } else if (section[ii].mode == 3) { // max
-        masterFadeDecrement(ii, tempSpeed);
-
-    } else if (section[ii].mode == 4 || section[ii].mode == 5 || section[ii].mode == 6) { //r, g, b
-        if (section[ii].extendedFade) {
-            fadeDecrement(ii, tempSpeed, 3);
-        } else {
-            fadeDecrement(ii, tempSpeed, section[ii].mode-4);
+        } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) { // r, g, b
+            uint8_t color = section[ii].mode-SINGLE_COLOR_MODE_OFFSET;
+            fadeDecrement(ii, tempSpeed, color);
         }
     }
 }
@@ -158,7 +143,7 @@ void btnBotHeld2p(uint8_t ii) {
 
 
 void btnBotHeld3p(uint8_t ii) {
-    if ((section[ii].mode == 1) || (section[ii].mode == 2)) {
+    if ((section[ii].mode == (LOW_CYCLE_STARTS_AT + 1)) || (section[ii].mode == (LOW_CYCLE_STARTS_AT + 2))) {
         // slow down colorProgress (increase delay)
         if (colorLoopDelayCtr == COLOR_LOOP_DELAY_CTR_INT) {   
             colorLoopDelayCtr = 0;
