@@ -1,4 +1,4 @@
-void btnActions(uint8_t ii, uint8_t bb) {
+void btnRelease(uint8_t ii, uint8_t bb) {
     // happens after a short delay following a button release
     section[ii]._btn[bb]->timeReleased = 0;
 
@@ -10,7 +10,8 @@ void btnActions(uint8_t ii, uint8_t bb) {
             extendedFade(ii);
         }
     
-    } else {                              // else this runs if it was not being held, regular button release!
+    } else { // else this runs if it was not being held (regular press and release)
+
         if (section[ii]._btn[bb]->pressCt > MAX_PRESS_COUNT) 
             section[ii]._btn[bb]->pressCt = MAX_PRESS_COUNT;
 
@@ -68,7 +69,7 @@ void topAction1press(uint8_t ii) {
             // pause colorProgress
             section[ii].colorProgress = !section[ii].colorProgress;
         } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) { // r, g, b
-            section[ii].RGBW[section[ii].mode-SINGLE_COLOR_MODE_OFFSET] += 0.2;
+            section[ii].RGBW[section[ii].mode - SINGLE_COLOR_MODE_OFFSET] += 0.2;
             if (section[ii].RGBW[section[ii].mode-SINGLE_COLOR_MODE_OFFSET] > 1)
                 section[ii].RGBW[section[ii].mode-SINGLE_COLOR_MODE_OFFSET] = 1;
 

@@ -3,57 +3,62 @@ const uint8_t COLOR_LOOP_DELAY_CTR_INT = 5;    // 5 * 20ms (main loop time) per 
 uint16_t colorLoopDelayCtr = 0;
 
 
-void btnHeldActions(uint8_t ii, uint8_t bb) {   // happens every loop while held
+void btnHeldActions(uint8_t ii, uint8_t bb) {   // happens every loop after "held delay (230ms)"
     if (!(section[ii]._btn[bb]->isHeld))
         section[ii]._btn[bb]->isHeld = true;
 
-    // disable extended fade while fading down (fades from extended thru to off)
-    if (bb == 0) { // bottom, fade down
-        disableExtendedFade(ii);
-    }
-
     if (bb == 1) {
-        if (section[ii]._btn[bb]->pressCt == 3) {
+        if (section[ii]._btn[bb]->pressCt == 3) 
             btnTopHeld3p(ii);
-        } else if (section[ii]._btn[bb]->pressCt == 2) {
+        else if (section[ii]._btn[bb]->pressCt == 2) 
             btnTopHeld2p(ii);
-        } else if (section[ii]._btn[bb]->pressCt == 1) {
+        else if (section[ii]._btn[bb]->pressCt == 1) 
             btnTopHeld1p(ii);
-        }
+        
     } else { // b == 0
-        if (section[ii]._btn[bb]->pressCt == 3) {
+        // disable extended fade while fading down (fades from extended thru to off)
+        disableExtendedFade(ii); // bottom, fade down, causes dim without stopping
+    
+        if (section[ii]._btn[bb]->pressCt == 3)
             btnBotHeld3p(ii);
-        } else if (section[ii]._btn[bb]->pressCt == 2) {
+        else if (section[ii]._btn[bb]->pressCt == 2)
             btnBotHeld2p(ii);
-        } else if (section[ii]._btn[bb]->pressCt == 1) {
+        else if (section[ii]._btn[bb]->pressCt == 1)
             btnBotHeld1p(ii);
-        }
+        
     }
 }
 
 
 
-
+//**********************************************************************
 
 
 
 void btnTopHeld1p(uint8_t ii) {
     if (!(section[ii].isOn)) {  // if fading up from off, turn "on" the correct light
         section[ii].isOn = true;
-        if (section[ii].mode == LOW_CYCLE_STARTS_AT) {
+        if (section[ii].mode == 0) {
+            section[ii].mode = LOW_CYCLE_STARTS_AT;
             section[ii].RGBWon[3] = true; //white on
-        } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) {
+            section[ii].RGBW[3] = 1;
+            section[ii].masterLevel = 0.001; //fixes fade up from off
+        } 
+        
+        else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) {
             section[ii].RGBWon[section[ii].mode-SINGLE_COLOR_MODE_OFFSET] = true;
         }
     }
     
+
     float tempSpeed = FADE_AMOUNT; // regular fade increment
     
     if (currentTime >= (section[ii]._btn[1]->timePressed + (BTN_FADE_DELAY * 3))) {
-        tempSpeed = FADE_AMOUNT * 2 * 2; // double a second time for triple time (so FADE_AMOUNT * (2*2))
+        tempSpeed *= 4; // double a second time for triple time (so FADE_AMOUNT * (2*2))
     } else if (currentTime >= (section[ii]._btn[1]->timePressed + (BTN_FADE_DELAY * 2))) {
-        tempSpeed = FADE_AMOUNT * 2; // double amount after double time
+        tempSpeed *= 2; // double amount after double time
     }
+
 
     if (section[ii].mode == (LOW_CYCLE_STARTS_AT + 3)) { // max brightness
         masterFadeIncrement(ii, tempSpeed);
@@ -69,7 +74,7 @@ void btnTopHeld1p(uint8_t ii) {
         }
     } else {
         //regular fade
-        if (section[ii].mode == LOW_CYCLE_STARTS_AT || section[ii].mode == (LOW_CYCLE_STARTS_AT + 1) || section[ii].mode == (LOW_CYCLE_STARTS_AT + 2) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 3)) { // whhite, rgb smooth, sudden;  combined
+        if (section[ii].mode == LOW_CYCLE_STARTS_AT || section[ii].mode == (LOW_CYCLE_STARTS_AT + 1) || section[ii].mode == (LOW_CYCLE_STARTS_AT + 2) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 3)) { // white, rgb smooth, sudden;  combined
             masterFadeIncrement(ii, tempSpeed);
             //fadeIncrement(ii, tempSpeed, NULL);
 
@@ -80,7 +85,40 @@ void btnTopHeld1p(uint8_t ii) {
 }
 
 void btnTopHeld2p(uint8_t ii) {
-    //fade down all lights?
+    //fade up all (similar) lights?
+    /**
+    if (section[ii].isOn) {
+        for (uint8_t section = 0; section < LIGHT_SECTION_COUNT; section++) {
+            if (section[section].mode == section[ii].mode) {
+                switch(section[section].mode) {
+                    case(1):
+                        //fade up W
+                        break;
+
+                    case(2):
+                    case(3):
+                        //fade up RGB
+                    
+                        break;
+
+                    case(4):
+                        //fade up all
+                        break;
+
+                    case(252):
+                    case(253):
+                    case(254):
+                        //fade up color
+                        break;
+                    
+                    case(255):
+                        //fade up combined
+                        break;
+                }
+            }
+        }
+    }
+     */
 }
 
 void btnTopHeld3p(uint8_t ii) {
@@ -138,7 +176,40 @@ void btnBotHeld1p(uint8_t ii) {
 
 
 void btnBotHeld2p(uint8_t ii) {
-    //fade up all lights?
+    //fade down all (similar) lights?
+    /**
+    if (section[ii].isOn) {
+        for (uint8_t section = 0; section < LIGHT_SECTION_COUNT; section++) {
+            if (section[section].mode == section[ii].mode) {
+                switch(section[section].mode) {
+                    case(1):
+                        //fade down W
+                        break;
+
+                    case(2):
+                    case(3):
+                        //fade down RGB
+                    
+                        break;
+
+                    case(4):
+                        //fade down all
+                        break;
+
+                    case(252):
+                    case(253):
+                    case(254):
+                        //fade down color
+                        break;
+                    
+                    case(255):
+                        //fade down combined
+                        break;
+                }
+            }
+        }
+    }
+     */
 }
 
 

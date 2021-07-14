@@ -23,12 +23,76 @@ uint32_t currentTime = 0;
 
 const uint8_t MAX_PRESS_COUNT = 3;              // single, double, triple press
 
+/**
+ * @brief 
+ * const uint8_t MODE_OFF = 0;
+ * 
+ * 
+ */
 const uint8_t LOW_CYCLE_STARTS_AT = 1;      // (index) white
-const uint8_t NUM_OF_MODES_IN_CYCLE_LOW = 3;
-const uint8_t HIGH_CYCLE_STARTS_AT = 5;     // (index) red
-const uint8_t NUM_OF_MODES_IN_CYCLE_HIGH = 4;    // red==4, green==5, blue==6, TODO: combined==7;
+const uint8_t NUM_OF_MODES_IN_CYCLE_LOW = 3; // white==1, rgbSmooth==2, rgbSudden==3
+const uint8_t MAX_BRIGHTNESS_MODE = 3 + LOW_CYCLE_STARTS_AT; // max==4
+const uint8_t HIGH_CYCLE_STARTS_AT = 252;     // (index) red
+const uint8_t NUM_OF_MODES_IN_CYCLE_HIGH = 4;    // red==252, green==253, blue==254, TODO: combined==255;
 
-const uint8_t SINGLE_COLOR_MODE_OFFSET = 5;
+const uint8_t SINGLE_COLOR_MODE_OFFSET = HIGH_CYCLE_STARTS_AT; //num req to get to 0 from red mode number
+
+
+
+
+
+/*
+ * BTN CLASS DEFINITION
+ */
+class Btn {
+    private:
+        uint8_t pinBtn;
+
+        uint32_t timeReleased = 0;
+        uint32_t timePressed = 0;
+
+        uint8_t pressCt = 0;
+
+        bool isHeld = false;
+
+    public:
+        //constructor
+        Btn(uint8_t pinBtn) {
+            this->pinBtn = pinBtn;
+
+            pinMode(pinBtn, INPUT);
+        }
+
+        //functions/methods
+        void registerPress(uint32_t t) { // takes the currentTime
+            pressCt++;  // add a press
+            timePressed = t; // save the time
+            // section[i]._btn[b]->pressCt ++;
+            // section[i]._btn[b]->timePressed = currentTime;
+        }
+
+        void registerRelease(uint32_t t) { // takes the currentTime
+            timePressed = 0; // reset
+            timeReleased = t; // save the time
+            // section[i]._btn[b]->timePressed = 0;
+            // section[i]._btn[b]->timeReleased = currentTime;
+        }
+
+};
+
+Btn btnC[] = {
+    Btn(ENTRY_BTN_PIN),
+    Btn(ENTRY_BTN_PIN),
+
+    Btn(KITCHEN_BTN_PIN),
+    Btn(KITCHEN_BTN_PIN),
+
+    Btn(ENTRY2_BTN_PIN),
+    Btn(ENTRY2_BTN_PIN),
+
+    Btn(BATH_BTN_PIN),
+    Btn(BATH_BTN_PIN),
+};
 
 struct btn_t {
     uint32_t timeReleased; //when was this button released?
@@ -60,6 +124,103 @@ struct btn_t {
     //sconce 1 button close button
 };
 
+
+/*
+ * SECTION CLASS DEFINITION
+ */
+
+class Section {
+    private:
+        //Btn *_btnC[2];
+        uint8_t DMX_OUT;
+        float BRIGHTNESS_FACTOR;
+
+        bool isOn;
+        bool colorProgress;
+        bool extendedFade;
+
+        float masterLevel;
+        float lastMasterLevel;
+        uint8_t mode;
+
+        uint32_t colorStartTime;
+        uint16_t colorDelayInt;
+        float colorDelayCtr;
+        uint8_t colorState;
+
+        bool RGBwon[4];
+        float RGBW[4];
+        float lastRGBW[4];
+        float nextRGB[3];
+
+    public:
+        //public vars, constructor, methods
+        Section(uint8_t DMX_OUT) {
+            this->DMX_OUT = DMX_OUT;
+
+        }
+        //methods for lights:
+        //fade up/down
+        //switch mode
+        //updatelights
+        //colorProgress
+        //
+        void updateLights(uint8_t i) { //might not need to take i but will for now
+            if (DEBUG) {
+                DEBUG_updateLights(i);
+
+            } else {
+                uint8_t brightnessValue = 0; // index for brightness lookup table
+
+                for (uint8_t color = 0; color < 4; color++) {
+                    if (RGBWon[color]) {
+
+                        //brightnessValue = lookupTable(i, color);
+                        
+                        uint8_t height = (uint16_t(RGBW[color] * masterLevel * TABLE_SIZE) / HEIGHT);
+                        uint8_t width = (uint16_t(RGBW[color] * masterLevel * TABLE_SIZE) % WIDTH);
+
+                        // look up brighness from table and saves as uint8_t brightness ( sizeof(brightness) resolves to 1 [byte of data])
+                        memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); 
+
+                        if ((RGBW[color] > 0) && (masterLevel > 0) && (brightnessValue == 0)) 
+                            brightnessValue = 1;
+                        
+                    } else {
+                        //brightnessValue = 0;
+                        // light is off, so turn it off
+                    }
+
+                    DmxSimple.write((DMX_OUT * 8) - 8 + (color * 2 + 1), brightnessValue);
+                    lastRGBW[color] = RGBW[color];
+                }
+            }
+                
+            if ( (RGBW[0] <= 0) && (RGBW[1] <= 0) && (RGBW[2] <= 0) && (RGBW[3] <= 0) ) {
+                //switch to mode 0?
+
+                isOn = false;
+                masterLevel = 0;
+
+                for (uint8_t color = 0; color < 4; color++) {  //clear rgbw
+                    RGBW[color] = 0;
+                    RGBWon[color] = false;
+                }
+
+                if (DEBUG) {
+                    DEBUG_updateLightsOff(i);
+                }
+            }
+        }
+};
+
+Section sectionC[] = {
+    Section(4),
+    Section(3),
+    Section(2),
+    Section(1),
+};
+
 struct section_t {
     btn_t *_btn[2];
     uint8_t PIN;
@@ -72,7 +233,7 @@ struct section_t {
 
     float masterLevel; // master brightness level
     float lastMasterLevel; // level from last time the light was on
-    int8_t mode; // 0-4: WW, colors, colors+ww, (All, Nightlight)
+    uint8_t mode; // 0-4: WW, colors, colors+ww, (All, Nightlight)
         // typical cycle is 0-1-2-0... modes 3 and 4 are hidden from the typical cycle.
 
     uint32_t colorStartTime;   // starting time of colorProgress
@@ -190,14 +351,14 @@ void loop() {
 
             for (uint8_t b = 0; b < 2; b++) {       // 2 buttons, bottom and top (0 and 1)s
 
-                if (btnStatus <= 255) {      // if no button is pressed:
+                if (btnStatus <= 255) { // if no button is pressed: (after press)
                     if (section[i]._btn[b]->timePressed > 0) {
                         // "register" a release of a button
                         section[i]._btn[b]->timePressed = 0; // reset
                         section[i]._btn[b]->timeReleased = currentTime; // save the time
                     }
                     else if ((section[i]._btn[b]->timeReleased != 0) && (currentTime >= (section[i]._btn[b]->timeReleased + BTN_RELEASE_TIMER))) 
-                        btnActions(i, b); // after small wait
+                        btnRelease(i, b); // after small wait
                     
                 } else if ((btnStatus >= (BTN_RESIST[b] - BTN_RESIST_TOLERANCE)) && (btnStatus <= (BTN_RESIST[b] + BTN_RESIST_TOLERANCE))) { // else btnStatus > 255: register press and/or do "held button" actions
 
@@ -206,7 +367,7 @@ void loop() {
                     }
                     if (section[i]._btn[b]->timePressed == 0) {
                         // "register" a press of a button
-                        section[i]._btn[b]->pressCt++;      // count the press
+                        section[i]._btn[b]->pressCt ++;      // count the press
                         section[i]._btn[b]->timePressed = currentTime; // save the time
                     } 
                     else if (currentTime >= (section[i]._btn[b]->timePressed + BTN_FADE_DELAY)) 

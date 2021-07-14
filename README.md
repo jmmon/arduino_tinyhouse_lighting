@@ -178,33 +178,11 @@ How to add colorProgress speed adjustment? currently refreshes every cycle (20ms
 
 
 
-
-
 in nightlight mode, double tap to switch to blue then green? (done)
 
 
 
-
-
-
-
-
-
-TODO
-when in nightlight mode, fading to off should switch out of nightlight mode 
-?? or not? stay in "red" mode?
-
-mode 7: 
-Then all the previous levels combined? haha
-
-Same with white: after hitting max brightness, fading up again turns on rgb as a white, then fading down will fade rgb then w
-colorProgress: after hitting max brightness, next time it fades it adds white? then fading down first fades down white then fades color.
-
-double press and hold on white fades ALL sets with white? or all?
-(Double press and hold on color fades ALL sets with color) or all?
-    - Don't adjust the original white level - instead use a second variable so they can stay in sync with each other in terms of starting difference in brightness level
-
-
+TODO: 1
 
 
 
@@ -299,3 +277,40 @@ White as extension:             color || RGB (individuals) as extension:
     modes: 1,2,4-7              mode: 0
 
 Mode without extension:     3
+
+
+
+
+
+
+
+TODO: 1
+    when in nightlight mode, fading to off should switch out of nightlight mode 
+    ?? or not? stay in "red" mode?
+
+    mode 7: 
+    Then all the previous levels combined? haha
+
+    Same with white: after hitting max brightness, fading up again turns on rgb as a white, then fading down will fade rgb then w
+    colorProgress: after hitting max brightness, next time it fades it adds white? then fading down first fades down white then fades color.
+
+    double press and hold on white fades ALL sets with white? or all?
+    (Double press and hold on color fades ALL sets with color) or all?
+        - Don't adjust the original white level - instead use a second variable so they can stay in sync with each other in terms of starting difference in brightness level
+
+
+
+TODO:
+    Triple tap + hold == fade all up/down? 
+        OR Double???????
+
+    That means double tap + hold == speedAdj for progressColor
+
+TODO:
+    attach methods to section? Such as:
+        fade up (mode)
+
+
+TODO:
+    Make section a class instead of struct!
+    make button a class instead of struct
