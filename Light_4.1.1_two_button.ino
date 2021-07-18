@@ -68,6 +68,21 @@ struct btn_t {
 };
 
 
+class RGBW_C {
+    private:
+    public:
+        RGBW_C() {
+
+        }
+};
+
+RGBW_C RGBW[][4] { // [section][color]
+    {RGBW_C(),RGBW_C(),RGBW_C(),RGBW_C(),},
+    {RGBW_C(),RGBW_C(),RGBW_C(),RGBW_C(),},
+    
+};
+
+
 struct section_t {
     btn_t *_btn[2];
     uint8_t PIN;
