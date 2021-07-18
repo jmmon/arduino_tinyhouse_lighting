@@ -3,6 +3,7 @@
  */
 class Btn {
     private:
+    public:
         uint8_t pinBtn;
 
         uint32_t timeReleased = 0;
@@ -12,13 +13,7 @@ class Btn {
 
         bool isHeld = false;
 
-    public:
         //constructor
-        Btn(uint8_t pinBtn) {
-            this->pinBtn = pinBtn;
-
-            pinMode(pinBtn, INPUT);
-        }
 
         //functions/methods
         void registerPress(uint32_t t) { // takes the currentTime
@@ -38,17 +33,44 @@ class Btn {
 };
 
 Btn btnC[] = {
-    Btn(ENTRY_BTN_PIN),
-    Btn(ENTRY_BTN_PIN),
+    Btn(),
+    Btn(),
 
-    Btn(KITCHEN_BTN_PIN),
-    Btn(KITCHEN_BTN_PIN),
+    Btn(),
+    Btn(),
 
-    Btn(ENTRY2_BTN_PIN),
-    Btn(ENTRY2_BTN_PIN),
+    Btn(),
+    Btn(),
 
-    Btn(BATH_BTN_PIN),
-    Btn(BATH_BTN_PIN),
+    Btn(),
+    Btn(),
+};
+
+
+
+
+
+class RGBW_C {
+    private:
+    public:
+        bool on = false;
+        float level = 0;
+        float lastLevel = 0;
+        float nextLevel = 0;
+        
+        RGBW_C() { //constructor
+
+        }
+
+
+};
+
+RGBW_C RGBW[][4] { // [section][color]
+    {RGBW_C(), RGBW_C(), RGBW_C(), RGBW_C(),},
+    {RGBW_C(), RGBW_C(), RGBW_C(), RGBW_C(),},
+    {RGBW_C(), RGBW_C(), RGBW_C(), RGBW_C(),},
+    {RGBW_C(), RGBW_C(), RGBW_C(), RGBW_C(),},
+    
 };
 
 
@@ -58,9 +80,11 @@ Btn btnC[] = {
 
 class Section {
     private:
+    public:
         //Btn *_btnC[2];
         uint8_t DMX_OUT;
         float BRIGHTNESS_FACTOR;
+        uint8_t PIN;
 
         bool isOn;
         bool colorProgress;
@@ -80,10 +104,11 @@ class Section {
         float lastRGBW[4];
         float nextRGB[3];
 
-    public:
         //public vars, constructor, methods
-        Section(uint8_t DMX_OUT) {   //, *Btn btn1, *Btn btn2) {
+        Section(uint8_t DMX_OUT, uint8_t pin) {   //, *Btn btn1, *Btn btn2) {
             DMX_OUT = DMX_OUT;
+            PIN = pin;
+            pinMode(pin, INPUT);
             // _btnC[0] = &btn1;
             // _btnC[1] = &btn2;
         }
@@ -143,8 +168,8 @@ class Section {
 };
 
 Section sectionC[] = {
-    Section(4), //, &btnC[0], &btnC[1]),
-    Section(3),
-    Section(2),
-    Section(1),
+    Section(4, ENTRY_BTN_PIN), //, &btnC[0], &btnC[1]),
+    Section(3, KITCHEN_BTN_PIN),
+    Section(2, ENTRY2_BTN_PIN),
+    Section(1, BATH_BTN_PIN),
 };
