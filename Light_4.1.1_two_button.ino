@@ -39,342 +39,67 @@ const uint8_t SINGLE_COLOR_MODE_OFFSET = HIGH_CYCLE_STARTS_AT; //num req to get 
 
 
 
+//light values lookup table, built on an S curve, to make LED dimming feel linear. 1024 stages.
+//Storing in PROGMEM allows for such a large array (1023 values). Without PROGMEM, an array of 512 values pushed the limit of dynamic memory but now it's ~51%.
+const uint8_t   WIDTH   = 32,
+                HEIGHT  = 32;
+const uint16_t TABLE_SIZE = 1023;
+const uint8_t DIMMER_LOOKUP_TABLE[HEIGHT][WIDTH] PROGMEM = {
+    //Adjusted to remove skipped numbers (added in missing numbers, then removed one from the end of every second line and adjusted accordingly)
+{ 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, },
+{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, },
+{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, },
+{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, },
 
+{ 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, },
+{ 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, },
+{ 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, },
+{ 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, },
 
-/*
- * BTN CLASS DEFINITION
- */
-class Btn {
-    private:
-        uint8_t pinBtn;
+{ 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, },
+{ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, },
+{ 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, },
+{ 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, },
 
-        uint32_t timeReleased = 0;
-        uint32_t timePressed = 0;
+{ 8, 8, 8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, },
+{ 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, },
+{ 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 14, },
+{ 14, 14, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 17, },
 
-        uint8_t pressCt = 0;
+{ 17, 17, 17, 17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 18, 18, 19, 19, 19, 19, 19, 19, 19, 19, 19, 19, 20, 20, 20, },
+{ 20, 20, 20, 20, 20, 20, 21, 21, 21, 21, 21, 21, 21, 21, 21, 22, 22, 22, 22, 22, 22, 22, 22, 23, 23, 23, 23, 23, 23, 23, 23, 24, },
+{ 24, 24, 24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 25, 26, 26, 26, 26, 26, 26, 26, 26, 27, 27, 27, 27, 27, 27, 28, 28, 28, 28, 28, },
+{ 28, 28, 29, 29, 29, 29, 29, 29, 30, 30, 30, 30, 30, 30, 31, 31, 31, 31, 31, 31, 32, 32, 32, 32, 32, 32, 33, 33, 33, 33, 33, 34, },
+ 
+{ 34, 34, 34, 34, 35, 35, 35, 35, 35, 36, 36, 36, 36, 36, 36, 37, 37, 37, 37, 37, 38, 38, 38, 38, 39, 39, 39, 39, 39, 40, 40, 40, },
+{ 40, 40, 41, 41, 41, 41, 42, 42, 42, 42, 42, 43, 43, 43, 43, 44, 44, 44, 44, 45, 45, 45, 45, 46, 46, 46, 46, 47, 47, 47, 47, 48, },
+{ 48, 48, 49, 49, 49, 49, 50, 50, 50, 50, 51, 51, 51, 52, 52, 52, 52, 53, 53, 53, 54, 54, 54, 54, 55, 55, 55, 56, 56, 56, 57, 57, },
+{ 57, 57, 58, 58, 58, 59, 59, 59, 60, 60, 60, 61, 61, 61, 62, 62, 62, 63, 63, 63, 64, 64, 64, 65, 65, 65, 66, 66, 67, 67, 67, 68, },
+ 
+{ 68, 68, 69, 69, 69, 70, 70, 71, 71, 71, 72, 72, 73, 73, 73, 74, 74, 75, 75, 75, 76, 76, 77, 77, 77, 78, 78, 79, 79, 80, 80, 80, },
+{ 81, 81, 82, 82, 83, 83, 84, 84, 84, 85, 85, 86, 86, 87, 87, 88, 88, 89, 89, 90, 90, 91, 91, 92, 92, 93, 93, 94, 94, 95, 95, 96, },
+{ 96, 97, 97, 98, 98, 99, 99, 100, 100, 101, 102, 102, 103, 103, 104, 104, 105, 105, 106, 107, 107, 108, 108, 109, 110, 110, 111, 111, 112, 113, 113, 114, },
+{ 114, 115, 116, 116, 117, 118, 118, 119, 119, 120, 121, 121, 122, 123, 123, 124, 125, 125, 126, 127, 127, 128, 129, 130, 130, 131, 132, 132, 133, 134, 135, 135, },
 
-        bool isHeld = false;
-
-    public:
-        //constructor
-        Btn(uint8_t pinBtn) {
-            this->pinBtn = pinBtn;
-
-            pinMode(pinBtn, INPUT);
-        }
-
-        //functions/methods
-        void registerPress(uint32_t t) { // takes the currentTime
-            pressCt++;  // add a press
-            timePressed = t; // save the time
-            // section[i]._btn[b]->pressCt ++;
-            // section[i]._btn[b]->timePressed = currentTime;
-        }
-
-        void registerRelease(uint32_t t) { // takes the currentTime
-            timePressed = 0; // reset
-            timeReleased = t; // save the time
-            // section[i]._btn[b]->timePressed = 0;
-            // section[i]._btn[b]->timeReleased = currentTime;
-        }
-
+{ 136, 137, 138, 138, 139, 140, 141, 141, 142, 143, 144, 144, 145, 146, 147, 148, 148, 149, 150, 151, 152, 152, 153, 154, 155, 156, 157, 157, 158, 159, 160, 161, },
+{ 162, 163, 164, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, },
+{ 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, },
+{ 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, },
 };
 
-Btn btnC[] = {
-    Btn(ENTRY_BTN_PIN),
-    Btn(ENTRY_BTN_PIN),
+const float DEFAULT_BRIGHTNESS = 0.60; // 0-1 (percent) value for default brightness when turned on
+const uint8_t COLOR_LOOP_SMOOTH_DELAY_INT = 20; //ms
+const uint16_t COLOR_LOOP_SUDDEN_DELAY_INT = 3000; //ms
+const float COLOR_LOOP_FADE_AMOUNT = 0.001;  // brightness adjust amount per tick
 
-    Btn(KITCHEN_BTN_PIN),
-    Btn(KITCHEN_BTN_PIN),
-
-    Btn(ENTRY2_BTN_PIN),
-    Btn(ENTRY2_BTN_PIN),
-
-    Btn(BATH_BTN_PIN),
-    Btn(BATH_BTN_PIN),
-};
-
-struct btn_t {
-    uint32_t timeReleased; //when was this button released?
-    uint32_t timePressed;  //when was this button pressed?
-    uint8_t pressCt;  //If button is pressed before timeReleased ends, add one to count
-    bool isHeld;        //is the button being held? (for longer than BTN_FADE_DELAY
-
-} btn[] = {
-    // Inside underloft
-    {0, 0, 0, false}, //entry button up         
-    {0, 0, 0, false}, //entry button down
-
-    // Outside (Porch)
-    {0, 0, 0, false}, //entry2 button up
-    {0, 0, 0, false}, //entry2 button down
-
-    // Kitchen underloft
-    {0, 0, 0, false}, //kitchen left wall
-    {0, 0, 0, false}, //kitchen
-
-    // Bathroom (back wall right nook)
-    {0, 0, 0, false}, //bath
-    {0, 0, 0, false},
-
-    //Back wall button
-    // {0, 0, 0, 0, false}, //Back wall (left) / Greenhouse?
-    // {0, 0, 0, 0, false},
-
-    //sconce 1 button close button
-};
-
-
-/*
- * SECTION CLASS DEFINITION
- */
-
-class Section {
-    private:
-        //Btn *_btnC[2];
-        uint8_t DMX_OUT;
-        float BRIGHTNESS_FACTOR;
-
-        bool isOn;
-        bool colorProgress;
-        bool extendedFade;
-
-        float masterLevel;
-        float lastMasterLevel;
-        uint8_t mode;
-
-        uint32_t colorStartTime;
-        uint16_t colorDelayInt;
-        float colorDelayCtr;
-        uint8_t colorState;
-
-        bool RGBwon[4];
-        float RGBW[4];
-        float lastRGBW[4];
-        float nextRGB[3];
-
-    public:
-        //public vars, constructor, methods
-        Section(uint8_t DMX_OUT) {
-            this->DMX_OUT = DMX_OUT;
-
-        }
-        //methods for lights:
-        //fade up/down
-        //switch mode
-        //updatelights
-        //colorProgress
-        //
-        void updateLights(uint8_t i) { //might not need to take i but will for now
-            if (DEBUG) {
-                DEBUG_updateLights(i);
-
-            } else {
-                uint8_t brightnessValue = 0; // index for brightness lookup table
-
-                for (uint8_t color = 0; color < 4; color++) {
-                    if (RGBWon[color]) {
-
-                        //brightnessValue = lookupTable(i, color);
-                        
-                        uint8_t height = (uint16_t(RGBW[color] * masterLevel * TABLE_SIZE) / HEIGHT);
-                        uint8_t width = (uint16_t(RGBW[color] * masterLevel * TABLE_SIZE) % WIDTH);
-
-                        // look up brighness from table and saves as uint8_t brightness ( sizeof(brightness) resolves to 1 [byte of data])
-                        memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); 
-
-                        if ((RGBW[color] > 0) && (masterLevel > 0) && (brightnessValue == 0)) 
-                            brightnessValue = 1;
-                        
-                    } else {
-                        //brightnessValue = 0;
-                        // light is off, so turn it off
-                    }
-
-                    DmxSimple.write((DMX_OUT * 8) - 8 + (color * 2 + 1), brightnessValue);
-                    lastRGBW[color] = RGBW[color];
-                }
-            }
-                
-            if ( (RGBW[0] <= 0) && (RGBW[1] <= 0) && (RGBW[2] <= 0) && (RGBW[3] <= 0) ) {
-                //switch to mode 0?
-
-                isOn = false;
-                masterLevel = 0;
-
-                for (uint8_t color = 0; color < 4; color++) {  //clear rgbw
-                    RGBW[color] = 0;
-                    RGBWon[color] = false;
-                }
-
-                if (DEBUG) {
-                    DEBUG_updateLightsOff(i);
-                }
-            }
-        }
-};
-
-Section sectionC[] = {
-    Section(4),
-    Section(3),
-    Section(2),
-    Section(1),
-};
-
-struct section_t {
-    btn_t *_btn[2];
-    uint8_t PIN;
-    uint8_t DMX_OUT;          // DMX OUT number (set of 4 channels) for this section
-    float BRIGHTNESS_FACTOR; // affects [default brightness + fade speed], pref range [0-1]
-
-    bool isOn;              // Are any levels > 0?
-    bool colorProgress;     // while true, colors for this section will cycle
-    bool extendedFade;      // enable extended fade
-
-    float masterLevel; // master brightness level
-    float lastMasterLevel; // level from last time the light was on
-    uint8_t mode; // 0-4: WW, colors, colors+ww, (All, Nightlight)
-        // typical cycle is 0-1-2-0... modes 3 and 4 are hidden from the typical cycle.
-
-    uint32_t colorStartTime;   // starting time of colorProgress
-    uint16_t colorDelayInt;     // adjust this to change colorProgress speed
-    float colorDelayCtr; // slows the color cycle, used to slow the "sudden" mode
-    uint8_t colorState;        // next color state in the cycle
-
-    bool RGBWon[4];     // is on? each color
-    float RGBW[4];     // stores current RGBW color levels
-    float lastRGBW[4]; // last color levels
-    float nextRGB[3]; // next state of RGB for colorProgress cycle. Stores index of lookup table. Could be modified by colorFadeLevel to change the max level for the colorProgress.
-
-} section[] = {
-    //  ID 0    Living Room Lights
-    {
-        {&btn[0], &btn[1]},
-        ENTRY_BTN_PIN, 4, 1.0, 
-        false, false, false,
-        1., 0., 0,
-        0, 0, 0., 0, 
-        {false, false, false, false},
-        {0., 0., 0., 0.}, 
-        {0., 0., 0., 0.}, 
-        {0., 0., 0.}, 
-    },
-
-    //  ID 1    Kitchen Lights
-    {
-        {&btn[4], &btn[5]},
-        KITCHEN_BTN_PIN, 3, 1.35, 
-        false, false, false,
-        1., 0., 0,
-        0, 0, 0., 0, 
-        {false, false, false, false},
-        {0., 0., 0., 0.}, 
-        {0., 0., 0., 0.}, 
-        {0, 0, 0}, 
-    },
-
-    //  ID 2   Porch Lights
-    {
-        {&btn[2], &btn[3]},
-        ENTRY2_BTN_PIN, 2, 1.6, 
-        false, false, false,
-        1., 0., 0, 
-        0, 0, 0., 0, 
-        {false, false, false, false},
-        {0., 0., 0., 0.}, 
-        {0., 0., 0., 0.}, 
-        {0, 0, 0}, 
-    },
-
-    //  ID 3   bath
-    {
-        {&btn[6], &btn[7]},
-        BATH_BTN_PIN, 1, 1.0, 
-        false, false, false,
-        1., 0., 0,
-        0, 0, 0., 0, 
-        {false, false, false, false},
-        {0., 0., 0., 0.}, 
-        {0., 0., 0., 0.}, 
-        {0, 0, 0}, 
-    },
-
-    //  ID     Overhead Bedroom
-    //  ID     Overhead Main
-    //  ID     Overhead Small Loft
-    //  ID     Greenhouse Lights
-};
-
-
-void setup() {
-    for (uint8_t i = 0; i < SECTION_COUNT; i++) 
-        pinMode(section[i].PIN, INPUT);
-    
-    randomSeed(analogRead(0)); // used to start colorProgress state at a random color
-    loopStartTime = millis();
-    currentTime = loopStartTime;
-
-    if (DEBUG) {
-        Serial.begin(9600); 
-        Serial.println(VERSION);
-
-    } else {
-        DmxSimple.maxChannel(CHANNELS);
-        DmxSimple.usePin(DMX_PIN);
-
-        for (uint8_t i = 1; i <= CHANNELS; i++)
-            DmxSimple.write(i, 0); // turn off all light channels
-    }
-}
-
-
-void loop() {
-    currentTime = millis();
-
-    for (uint8_t i = 0; i < SECTION_COUNT; i++) {
-        if (section[i].colorProgress) {
-            if (currentTime >= (section[i].colorStartTime + section[i].colorDelayInt)) { //loop is separate for this, so speed change works well
-                section[i].colorStartTime += section[i].colorDelayInt;
-                if (section[i].mode == (LOW_CYCLE_STARTS_AT + 2)) 
-                    progressColorSudden(i);
-                else if (section[i].mode == (LOW_CYCLE_STARTS_AT + 1)) 
-                    progressColorSmooth(i);
-            }
-        }
-    }
-
-    if (currentTime >= (loopStartTime + LOOP_DELAY_INTERVAL)) {
-        loopStartTime += LOOP_DELAY_INTERVAL; // set time for next timer
-
-        for (uint8_t i = 0; i < SECTION_COUNT; i++) {
-            uint16_t btnStatus = analogRead(section[i].PIN);
-
-            for (uint8_t b = 0; b < 2; b++) {       // 2 buttons, bottom and top (0 and 1)s
-
-                if (btnStatus <= 255) { // if no button is pressed: (after press)
-                    if (section[i]._btn[b]->timePressed > 0) {
-                        // "register" a release of a button
-                        section[i]._btn[b]->timePressed = 0; // reset
-                        section[i]._btn[b]->timeReleased = currentTime; // save the time
-                    }
-                    else if ((section[i]._btn[b]->timeReleased != 0) && (currentTime >= (section[i]._btn[b]->timeReleased + BTN_RELEASE_TIMER))) 
-                        btnRelease(i, b); // after small wait
-                    
-                } else if ((btnStatus >= (BTN_RESIST[b] - BTN_RESIST_TOLERANCE)) && (btnStatus <= (BTN_RESIST[b] + BTN_RESIST_TOLERANCE))) { // else btnStatus > 255: register press and/or do "held button" actions
-
-                    if (DEBUG) {
-                        DEBUG_heldActions(i, b, btnStatus);
-                    }
-                    if (section[i]._btn[b]->timePressed == 0) {
-                        // "register" a press of a button
-                        section[i]._btn[b]->pressCt ++;      // count the press
-                        section[i]._btn[b]->timePressed = currentTime; // save the time
-                    } 
-                    else if (currentTime >= (section[i]._btn[b]->timePressed + BTN_FADE_DELAY)) 
-                        btnHeldActions(i, b);
-
-                }
-            } // button loop
-        } // section loop
-    } // timer loop
-} // void loop
+const float _HIGH = 0.95,
+             _MID =  0.85,
+             _LOW = 0.60;
+const uint8_t MAX_COLOR_STATE = 12;
+const float RED_LIST[MAX_COLOR_STATE] =   {1., _HIGH,  _MID, _LOW,     0, 0,       0, 0,           0, _LOW,    _MID, _HIGH },
+            GREEN_LIST[MAX_COLOR_STATE] = {0, _LOW,    _MID, _HIGH,    1., _HIGH,  _MID, _LOW,     0, 0,       0, 0        },
+            BLUE_LIST[MAX_COLOR_STATE] =  {0, 0,       0, 0,           0, _LOW,    _MID, _HIGH,    1., _HIGH,  _MID, _LOW};
+// const uint8_t MAX_COLOR_STATE = 6;
+// const float RED_LIST[] = {1., _MID, 0, 0, 0, _MID};
+// const float GREEN_LIST[] = {0, _MID, 1., _MID, 0, 0};
+// const float BLUE_LIST[] = {0, 0, 0, _MID, 1., _MID};
