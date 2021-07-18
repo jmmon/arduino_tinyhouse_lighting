@@ -2,53 +2,40 @@
  * BTN CLASS DEFINITION
  */
 class Btn {
-    private:
-        uint8_t pinBtn;
-
+    public:
         uint32_t timeReleased = 0;
         uint32_t timePressed = 0;
 
         uint8_t pressCt = 0;
 
         bool isHeld = false;
-
-    public:
-        //constructor
-        Btn(uint8_t pinBtn) {
-            this->pinBtn = pinBtn;
-
-            pinMode(pinBtn, INPUT);
-        }
+        //no constructor
 
         //functions/methods
-        void registerPress(uint32_t t) { // takes the currentTime
+        void registerPress() {
             pressCt++;  // add a press
-            timePressed = t; // save the time
-            // section[i]._btn[b]->pressCt ++;
-            // section[i]._btn[b]->timePressed = currentTime;
+            timePressed = currentTime; // save the time
         }
 
-        void registerRelease(uint32_t t) { // takes the currentTime
+        void registerRelease() {
             timePressed = 0; // reset
-            timeReleased = t; // save the time
-            // section[i]._btn[b]->timePressed = 0;
-            // section[i]._btn[b]->timeReleased = currentTime;
+            timeReleased = currentTime; // save the time
         }
 
 };
 
 Btn btnC[] = {
-    Btn(ENTRY_BTN_PIN),
-    Btn(ENTRY_BTN_PIN),
+    Btn(),
+    Btn(),
 
-    Btn(KITCHEN_BTN_PIN),
-    Btn(KITCHEN_BTN_PIN),
+    Btn(),
+    Btn(),
 
-    Btn(ENTRY2_BTN_PIN),
-    Btn(ENTRY2_BTN_PIN),
+    Btn(),
+    Btn(),
 
-    Btn(BATH_BTN_PIN),
-    Btn(BATH_BTN_PIN),
+    Btn(),
+    Btn(),
 };
 
 
@@ -58,34 +45,44 @@ Btn btnC[] = {
 
 class Section {
     private:
-        //Btn *_btnC[2];
-        uint8_t DMX_OUT;
-        float BRIGHTNESS_FACTOR;
-
-        bool isOn;
-        bool colorProgress;
-        bool extendedFade;
-
-        float masterLevel;
-        float lastMasterLevel;
-        uint8_t mode;
-
-        uint32_t colorStartTime;
-        uint16_t colorDelayInt;
-        float colorDelayCtr;
-        uint8_t colorState;
-
-        bool RGBWon[4];
-        float RGBW[4];
-        float lastRGBW[4];
-        float nextRGB[3];
 
     public:
+        Btn *_btnC[2];  //pointer variable points to the btns
+        uint8_t PIN;
+        uint8_t mode = 0;
+        uint32_t colorStartTime = 0;
+        uint16_t colorDelayInt = 0;
+
+        bool colorProgress = false;
+        bool extendedFade = false;
+        bool isOn = false;
+
+        float masterLevel = 0;
+        float RGBW[4] = {0, 0, 0, 0};
+        bool RGBWon[4] = {false, false, false, false};
+        
+        uint8_t DMX_OUT;
+        float BRIGHTNESS_FACTOR = 1;
+
+        float lastMasterLevel = 0;
+
+        float colorDelayCtr;
+        uint8_t colorState = random(12);
+
+        float lastRGBW[4] = {0, 0, 0, 0};
+        float nextRGB[3] = {0, 0, 0};
+        
         //public vars, constructor, methods
-        Section(uint8_t DMX_OUT) {   //, *Btn btn1, *Btn btn2) {
-            DMX_OUT = DMX_OUT;
-            // _btnC[0] = &btn1;
-            // _btnC[1] = &btn2;
+        Section(uint8_t dmx_out, Btn *_bot, Btn *_top, uint8_t pin, float brightnessFactor) { //constructor
+            DMX_OUT = dmx_out;
+            btnC[0] = *_bot;
+            btnC[1] = *_top;
+            PIN = pin;
+            BRIGHTNESS_FACTOR = brightnessFactor;
+            
+            pinMode(pin, INPUT);
+            pinMode(pin, INPUT);
+
         }
         //methods for lights:
         //fade up/down
@@ -143,8 +140,8 @@ class Section {
 };
 
 Section sectionC[] = {
-    Section(4), //, &btnC[0], &btnC[1]),
-    Section(3),
-    Section(2),
-    Section(1),
+    Section(4, &btnC[0], &btnC[1], ENTRY_BTN_PIN, 1.0), //store address of btns
+    Section(3, &btnC[4], &btnC[5], KITCHEN_BTN_PIN, 1.35), //store address of btns
+    Section(2, &btnC[2], &btnC[3], ENTRY2_BTN_PIN, 1.6), //store address of btns
+    Section(1, &btnC[6], &btnC[7], BATH_BTN_PIN, 1), //store address of btns
 };
