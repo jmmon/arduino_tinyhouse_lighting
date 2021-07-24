@@ -169,10 +169,6 @@ void switchMode(uint8_t nn) {
             switchToCombined(nn);
             break;
     }
-
-    if ((section[nn].mode != (LOW_CYCLE_STARTS_AT + 1)) && (section[nn].mode != (LOW_CYCLE_STARTS_AT + 2))) { //if not rgb smooth/sudden 
-        updateLights(nn);
-    }    
 }
 
 void switchToOff(uint8_t nn) { // 0
@@ -187,6 +183,8 @@ void switchToOff(uint8_t nn) { // 0
     //save masterLevel so that next time it can be used as the starting point?
     section[nn].lastMasterLevel = section[nn].masterLevel;
     section[nn].masterLevel = 0;
+    
+    updateLights(nn);
 }
 
 void switchToWhite(uint8_t nn) { // 1
@@ -200,6 +198,8 @@ void switchToWhite(uint8_t nn) { // 1
     section[nn].RGBW[3] = 1;
     section[nn].RGBWon[3] = true;
     section[nn].masterLevel = section[nn].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS;
+    
+    updateLights(nn);
 }
 
 void switchToRGB(uint8_t nn) { // 2, 3
@@ -236,22 +236,26 @@ void switchToMax(uint8_t nn) { // 4
     }
         
     section[nn].masterLevel = 1;
+    
+    updateLights(nn);
 }
 
 
 void switchToSingleColor(uint8_t nn) { // 252-254
-    section[nn].isOn = true;
+    section[nn].RGBWon[3] = false; // turn off white
+    section[nn].RGBW[3] = 0;
+    
     for (uint8_t color = 0; color < 3; color++) {
         section[nn].RGBWon[color] = false;
         if (section[nn].RGBW[color] == 0) { // give em some value for combined from double bottom press from red
             section[nn].RGBW[color] = section[nn].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS * 2 / 3;
         }
     }
-    section[nn].RGBWon[3] = false; // turn off white
-    section[nn].RGBW[3] = 0;
     // section[nn].RGBW[section[nn].mode-SINGLE_COLOR_MODE_OFFSET] = section[nn].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS * 2 / 3;
     section[nn].RGBWon[section[nn].mode-SINGLE_COLOR_MODE_OFFSET] = true;
     section[nn].masterLevel = 1;
+    
+    updateLights(nn);
 }
 
 void switchToCombined(uint8_t nn) { // 255
@@ -278,6 +282,8 @@ void switchToCombined(uint8_t nn) { // 255
         section[nn].RGBW[1] = (section[nn].RGBW[1] / section[nn].RGBW[2]);
         section[nn].RGBW[2] = 1;
     }
+    
+    updateLights(nn);
 }
 //**********************************************************************
 
@@ -289,10 +295,7 @@ void updateLights(uint8_t i) { // updates a specific light section
         uint8_t brightnessValue = 0; // index for brightness lookup table
 
         for (uint8_t color = 0; color < 4; color++) {
-            if (section[i].RGBWon[color]) {
-
-                //brightnessValue = lookupTable(i, color);
-                
+            if (section[i].RGBWon[color]) {                
                 uint8_t height = (uint16_t(section[i].RGBW[color] * section[i].masterLevel * TABLE_SIZE) / HEIGHT);
                 uint8_t width = (uint16_t(section[i].RGBW[color] * section[i].masterLevel * TABLE_SIZE) % WIDTH);
 
@@ -302,9 +305,6 @@ void updateLights(uint8_t i) { // updates a specific light section
                 if ((section[i].RGBW[color] > 0) && (section[i].masterLevel > 0) && (brightnessValue == 0)) 
                     brightnessValue = 1;
                 
-            } else {
-                //brightnessValue = 0;
-                // light is off, so turn it off
             }
 
             DmxSimple.write((section[i].DMX_OUT * 8) - 8 + (color * 2 + 1), brightnessValue);

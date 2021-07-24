@@ -125,7 +125,7 @@ void topAction3presses(uint8_t ii, uint8_t bb) {
 // PRESS BOT from off: turn on nightlight mode (red and/or ww)
 // PRESS BOT from on: turn off all lights, reset mode;
 void botAction1press(uint8_t n) {
-    if (section[n].isOn) { // turn off light
+    if (section[n].isOn) { // if on turn off
         if (DEBUG) {
             Serial.println(F(" BOT 1: Turn Off "));
         }

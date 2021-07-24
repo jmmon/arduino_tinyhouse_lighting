@@ -151,5 +151,3 @@ struct section_t {
     //  ID     Overhead Small Loft
     //  ID     Greenhouse Lights
 };
-
-
