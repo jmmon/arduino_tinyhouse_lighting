@@ -40,5 +40,5 @@ void DEBUG_heldActions(uint8_t ii, uint8_t bb, uint16_t s) {
     else 
         Serial.print(F("Up"));
 
-    Serial.print(F(": ")); Serial.print(section[ii]._btn[bb]->pressCt); Serial.println(F(" presses"));
+    Serial.print(F(": ")); Serial.print(section[ii]._btn[bb]->pressCtr); Serial.println(F(" presses"));
 }

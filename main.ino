@@ -61,7 +61,7 @@ void loop() {
                     if (section[i]._btn[b]->timePressed == 0) {
                         // "register" a press of a button
                         section[i]._btn[b]->registerPress();
-                        // section[i]._btn[b]->pressCt ++;      // count the press
+                        // section[i]._btn[b]->pressCtr ++;      // count the press
                         // section[i]._btn[b]->timePressed = currentTime; // save the time
                     } 
                     else if (currentTime >= (section[i]._btn[b]->timePressed + BTN_FADE_DELAY)) 

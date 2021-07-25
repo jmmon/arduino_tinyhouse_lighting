@@ -8,22 +8,22 @@ void btnHeldActions(uint8_t ii, uint8_t bb) {   // happens every loop after "hel
         section[ii]._btn[bb]->isHeld = true;
 
     if (bb == 1) {
-        if (section[ii]._btn[bb]->pressCt == 3) 
+        if (section[ii]._btn[bb]->pressCtr == 3) 
             btnTopHeld3p(ii);
-        else if (section[ii]._btn[bb]->pressCt == 2) 
+        else if (section[ii]._btn[bb]->pressCtr == 2) 
             btnTopHeld2p(ii);
-        else if (section[ii]._btn[bb]->pressCt == 1) 
+        else if (section[ii]._btn[bb]->pressCtr == 1) 
             btnTopHeld1p(ii);
         
     } else { // b == 0
         // disable extended fade while fading down (fades from extended thru to off)
         disableExtendedFade(ii); // bottom, fade down, causes dim without stopping
     
-        if (section[ii]._btn[bb]->pressCt == 3)
+        if (section[ii]._btn[bb]->pressCtr == 3)
             btnBotHeld3p(ii);
-        else if (section[ii]._btn[bb]->pressCt == 2)
+        else if (section[ii]._btn[bb]->pressCtr == 2)
             btnBotHeld2p(ii);
-        else if (section[ii]._btn[bb]->pressCt == 1)
+        else if (section[ii]._btn[bb]->pressCtr == 1)
             btnBotHeld1p(ii);
         
     }

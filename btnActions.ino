@@ -12,43 +12,43 @@ void btnRelease(uint8_t ii, uint8_t bb) {
     
     } else { // else this runs if it was not being held (regular press and release)
 
-        if (section[ii]._btn[bb]->pressCt > MAX_PRESS_COUNT) 
-            section[ii]._btn[bb]->pressCt = MAX_PRESS_COUNT;
+        if (section[ii]._btn[bb]->pressCtr > MAX_PRESS_COUNT) 
+            section[ii]._btn[bb]->pressCtr = MAX_PRESS_COUNT;
 
         if (DEBUG) {
             if (bb == 1) 
                 Serial.print(F(" TOP "));
             else
                 Serial.print(F(" BOT "));
-            Serial.print(section[ii]._btn[bb]->pressCt);
+            Serial.print(section[ii]._btn[bb]->pressCtr);
             Serial.println(F(" "));
         }
 
         if (bb == 1) {  // top button actions
-            if (section[ii]._btn[bb]->pressCt == 3) {
+            if (section[ii]._btn[bb]->pressCtr == 3) {
                 topAction3presses(ii, bb);
                 if (DEBUG) {
                     Serial.println(F("Max Brightness {mode:3}"));
                 }
-            }else if (section[ii]._btn[bb]->pressCt == 2) {
+            }else if (section[ii]._btn[bb]->pressCtr == 2) {
                 topAction2presses(ii);
-            }else if (section[ii]._btn[bb]->pressCt == 1) {
+            }else if (section[ii]._btn[bb]->pressCtr == 1) {
                 topAction1press(ii);
             }
         } else {  // bottom button actions
-            if (section[ii]._btn[bb]->pressCt == 3) {
+            if (section[ii]._btn[bb]->pressCtr == 3) {
                 botAction3presses(ii, bb);
                 if (DEBUG) {
                     Serial.println(F("Max Brightness {mode:3}"));
                 }
-            }else if (section[ii]._btn[bb]->pressCt == 2) {
+            }else if (section[ii]._btn[bb]->pressCtr == 2) {
                 botAction2presses(ii);
-            }else if (section[ii]._btn[bb]->pressCt == 1) {
+            }else if (section[ii]._btn[bb]->pressCtr == 1) {
                 botAction1press(ii);
             }
         }
     }
-    section[ii]._btn[bb]->pressCt = 0;
+    section[ii]._btn[bb]->pressCtr = 0;
 }
 
 

@@ -46,13 +46,13 @@ class Btn_C {
         uint32_t timeReleased = 0;
         uint32_t timePressed = 0;
 
-        uint8_t pressCt = 0;
+        uint8_t pressCtr = 0;
         bool isHeld = false;
 
         //no constructor
         //functions/methods
         void registerPress() {
-            pressCt++;  // add a press
+            pressCtr++;  // add a press
             timePressed = currentTime; // save the time
         }
 
@@ -64,50 +64,25 @@ class Btn_C {
 };
 
 Btn_C btn[] = {
-    Btn_C(), //entry button up  
-    Btn_C(), //entry button down
+    // left buttons (inside under loft)
+    Btn_C(), // entry button up  
+    Btn_C(), // entry button down
 
-    Btn_C(), //entry2 button up
-    Btn_C(), //entry2 button down
+    // porch
+    Btn_C(), // entry2 button up
+    Btn_C(), // entry2 button down
 
-    Btn_C(), //kitchen 
+    // kitchen (under sm loft)
+    Btn_C(), // kitchen 
     Btn_C(),
 
-    Btn_C(), //bath
+    // TODO
+    Btn_C(), // bath
     Btn_C(),
+
+    // TODO:
+    // sconce 1 button close button
 };
-
-// struct btn_t {
-//     uint32_t timeReleased; //when was this button released?
-//     uint32_t timePressed;  //when was this button pressed?
-//     uint8_t pressCt;  //If button is pressed before timeReleased ends, add one to count
-//     bool isHeld;        //is the button being held? (for longer than BTN_FADE_DELAY
-
-// } btn[] = {
-//     // Inside underloft
-//     {0, 0, 0, false}, //entry button up         
-//     {0, 0, 0, false}, //entry button down
-
-//     // Outside (Porch)
-//     {0, 0, 0, false}, //entry2 button up
-//     {0, 0, 0, false}, //entry2 button down
-
-//     // Kitchen underloft
-//     {0, 0, 0, false}, //kitchen left wall
-//     {0, 0, 0, false}, //kitchen
-
-//     // Bathroom (back wall right nook)
-//     {0, 0, 0, false}, //bath
-//     {0, 0, 0, false},
-
-//     //Back wall button
-//     // {0, 0, 0, 0, false}, //Back wall (left) / Greenhouse?
-//     // {0, 0, 0, 0, false},
-
-//     //sconce 1 button close button
-// };
-
-
 
 
 struct section_t {
