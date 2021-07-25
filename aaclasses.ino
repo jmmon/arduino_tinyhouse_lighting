@@ -54,15 +54,15 @@ class Section_C {
     public:
         // public vars, constructor, methods
         Btn_C *_btn[2];
+        uint8_t PIN;
         uint8_t DMX_OUT;
         float BRIGHTNESS_FACTOR = 1;
-        uint8_t PIN;
 
         bool isOn = false;
         bool colorProgress = false;
         bool extendedFade = false;
 
-        float masterLevel = 0;
+        float masterLevel = 1;
         float lastMasterLevel = 0;
         uint8_t mode = 0;
 
@@ -91,72 +91,6 @@ class Section_C {
         //updatelights
         //colorProgress
         //
-
-        // void updateLights() {
-        //     uint8_t brightnessValue = 0;  // holds our brightness
-        //     if (DEBUG) {
-
-        //         uint8_t height = (uint16_t(RGBW[3] * masterLevel * TABLE_SIZE) / HEIGHT);
-        //         uint8_t width = (uint16_t(RGBW[3] * masterLevel * TABLE_SIZE) % WIDTH);
-
-        //         // look up brighness from table and saves as temp ( sizeof(temp) resolves to 1 [byte of data])
-        //         memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); 
-
-        //         if ((RGBW[3] > 0) && (masterLevel > 0) && (brightnessValue == 0)) 
-        //             brightnessValue = 1;
-                
-
-        //         Serial.print(F("table_w:"));    Serial.print(width);
-        //         Serial.print(F(", table_h:"));  Serial.print(height);
-                
-        //         Serial.print(F(" lvl:"));   Serial.print(brightnessValue);
-        //         Serial.print(F(" W: "));    Serial.print(RGBW[3]);
-        //         Serial.print(F(" R: "));    Serial.print(RGBW[0]);
-        //         Serial.print(F(" G: "));    Serial.print(RGBW[1]);
-        //         Serial.print(F(" B: "));    Serial.print(RGBW[2]);
-        //         Serial.print(F(" Master level: ")); Serial.print(masterLevel);
-        //         Serial.print(F(" cur_t:")); Serial.println(currentTime);
-
-        //     } else {
-        //         for (uint8_t color = 0; color < 4; color++) {
-        //             if (RGBWon[color]) {
-                        
-        //                 uint8_t height = (uint16_t(RGBW[color] * masterLevel * TABLE_SIZE) / HEIGHT);
-        //                 uint8_t width = (uint16_t(RGBW[color] * masterLevel * TABLE_SIZE) % WIDTH);
-
-        //                 // look up brighness from table and saves as uint8_t brightness ( sizeof(brightness) resolves to 1 [byte of data])
-        //                 memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); 
-
-        //                 if ((RGBW[color] > 0) && (masterLevel > 0) && (brightnessValue == 0)) 
-        //                     brightnessValue = 1;
-                        
-        //             } // else light is off, so turn it off
-        //             uint8_t channel = (DMX_OUT * 8) - 8 + (color * 2 + 1);
-        //             DmxSimple.write(channel, brightnessValue);
-        //             lastRGBW[color] = RGBW[color];
-        //         }
-        //     }
-                
-        //     if ( (!RGBWon[0]) && (!RGBWon[1]) && (!RGBWon[2]) && (!RGBWon[3]) ) {
-        //         //switch to mode 0? already should be at 0
-
-        //         isOn = false;
-        //         masterLevel = 0;
-
-        //         for (uint8_t color = 0; color < 4; color++) {  //clear rgbw
-        //             if (RGBW[color] <= 0) {
-        //                 RGBW[color] = 0;
-        //             }
-        //         }
-
-        //         if (DEBUG) {
-        //             //TODO: Import this function
-        //             //DEBUG_updateLightsOff(i);
-        //             Serial.print(F("MasterBrightness: ")); Serial.println(masterLevel);
-        //             Serial.print(F("IsOn:")); Serial.println(isOn);
-        //         }
-        //     }
-        // }
 };
 
 Section_C sectionC[] = {
