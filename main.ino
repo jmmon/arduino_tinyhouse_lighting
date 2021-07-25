@@ -46,8 +46,9 @@ void loop() {
                 if (btnStatus <= 255) { // if no button is pressed: (after press)
                     if (section[i]._btn[b]->timePressed > 0) {
                         // "register" a release of a button
-                        section[i]._btn[b]->timePressed = 0; // reset
-                        section[i]._btn[b]->timeReleased = currentTime; // save the time
+                        section[i]._btn[b]->registerRelease();
+                        // section[i]._btn[b]->timePressed = 0; // reset
+                        // section[i]._btn[b]->timeReleased = currentTime; // save the time
                     }
                     else if ((section[i]._btn[b]->timeReleased != 0) && (currentTime >= (section[i]._btn[b]->timeReleased + BTN_RELEASE_TIMER))) 
                         btnRelease(i, b); // after small wait
@@ -59,8 +60,9 @@ void loop() {
                     }
                     if (section[i]._btn[b]->timePressed == 0) {
                         // "register" a press of a button
-                        section[i]._btn[b]->pressCt ++;      // count the press
-                        section[i]._btn[b]->timePressed = currentTime; // save the time
+                        section[i]._btn[b]->registerPress();
+                        // section[i]._btn[b]->pressCt ++;      // count the press
+                        // section[i]._btn[b]->timePressed = currentTime; // save the time
                     } 
                     else if (currentTime >= (section[i]._btn[b]->timePressed + BTN_FADE_DELAY)) 
                         btnHeldActions(i, b);

@@ -37,6 +37,46 @@ const uint8_t NUM_OF_MODES_IN_CYCLE_HIGH = 4;    // red==252, green==253, blue==
 
 const uint8_t SINGLE_COLOR_MODE_OFFSET = HIGH_CYCLE_STARTS_AT; //num req to get to 0 from red mode number
 
+/*
+ * BTN CLASS DEFINITION
+ */
+class Btn_C {
+    //private:
+    public:
+        uint32_t timeReleased = 0;
+        uint32_t timePressed = 0;
+
+        uint8_t pressCt = 0;
+        bool isHeld = false;
+
+        //no constructor
+        //functions/methods
+        void registerPress() {
+            pressCt++;  // add a press
+            timePressed = currentTime; // save the time
+        }
+
+        void registerRelease() {
+            timePressed = 0; // reset depressed timer
+            timeReleased = currentTime; // save the time
+        }
+
+};
+
+Btn_C btn[] = {
+    Btn_C(), //entry button up  
+    Btn_C(), //entry button down
+
+    Btn_C(), //entry2 button up
+    Btn_C(), //entry2 button down
+
+    Btn_C(), //kitchen 
+    Btn_C(),
+
+    Btn_C(), //bath
+    Btn_C(),
+};
+
 // struct btn_t {
 //     uint32_t timeReleased; //when was this button released?
 //     uint32_t timePressed;  //when was this button pressed?
@@ -71,7 +111,7 @@ const uint8_t SINGLE_COLOR_MODE_OFFSET = HIGH_CYCLE_STARTS_AT; //num req to get 
 
 
 struct section_t {
-    btn_t *_btn[2];
+    Btn_C *_btn[2];
     uint8_t PIN;
     uint8_t DMX_OUT;          // DMX OUT number (set of 4 channels) for this section
     float BRIGHTNESS_FACTOR; // affects [default brightness + fade speed], pref range [0-1]
@@ -153,5 +193,3 @@ struct section_t {
     //  ID     Overhead Small Loft
     //  ID     Greenhouse Lights
 };
-
-

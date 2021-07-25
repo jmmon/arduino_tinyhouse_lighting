@@ -1,42 +1,4 @@
-/*
- * BTN CLASS DEFINITION
- */
-class Btn {
-    //private:
-    public:
-        uint32_t timeReleased = 0;
-        uint32_t timePressed = 0;
 
-        uint8_t pressCt = 0;
-        bool isHeld = false;
-
-        //no constructor
-        //functions/methods
-        void registerPress() {
-            pressCt++;  // add a press
-            timePressed = currentTime; // save the time
-        }
-
-        void registerRelease() {
-            timePressed = 0; // reset depressed timer
-            timeReleased = currentTime; // save the time
-        }
-
-};
-
-Btn btnC[] = {
-    Btn(),
-    Btn(),
-
-    Btn(),
-    Btn(),
-
-    Btn(),
-    Btn(),
-
-    Btn(),
-    Btn(),
-};
 
 
 
