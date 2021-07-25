@@ -125,14 +125,32 @@ class Section_C {
         //colorProgress
         //
 
-        void updateLights() { //might not need to take i but will for now
+        void updateLights() {
+            uint8_t brightnessValue = 0;  // holds our brightness
             if (DEBUG) {
-                //TODO: import the below function
-                //DEBUG_updateLights(i);
+
+                uint8_t height = (uint16_t(RGBW[3] * masterLevel * TABLE_SIZE) / HEIGHT);
+                uint8_t width = (uint16_t(RGBW[3] * masterLevel * TABLE_SIZE) % WIDTH);
+
+                // look up brighness from table and saves as temp ( sizeof(temp) resolves to 1 [byte of data])
+                memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); 
+
+                if ((RGBW[3] > 0) && (masterLevel > 0) && (brightnessValue == 0)) 
+                    brightnessValue = 1;
+                
+
+                Serial.print(F("table_w:"));    Serial.print(width);
+                Serial.print(F(", table_h:"));  Serial.print(height);
+                
+                Serial.print(F(" lvl:"));   Serial.print(brightnessValue);
+                Serial.print(F(" W: "));    Serial.print(RGBW[3]);
+                Serial.print(F(" R: "));    Serial.print(RGBW[0]);
+                Serial.print(F(" G: "));    Serial.print(RGBW[1]);
+                Serial.print(F(" B: "));    Serial.print(RGBW[2]);
+                Serial.print(F(" Master level: ")); Serial.print(masterLevel);
+                Serial.print(F(" cur_t:")); Serial.println(currentTime);
 
             } else {
-                uint8_t brightnessValue = 0; // holds our brightness
-
                 for (uint8_t color = 0; color < 4; color++) {
                     if (RGBWon[color]) {
                         
@@ -165,8 +183,8 @@ class Section_C {
                 }
 
                 if (DEBUG) {
-                    //TODO: Import this function
-                    //DEBUG_updateLightsOff(i);
+                    Serial.print(F("MasterBrightness: ")); Serial.println(masterLevel);
+                    Serial.print(F("IsOn:")); Serial.println(isOn);
                 }
             }
         }

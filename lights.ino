@@ -78,7 +78,7 @@ void masterFadeIncrement(uint8_t i, float f) {
     if (section[i].masterLevel > 1.0) {
         section[i].masterLevel = 1.0; // max
     }
-    updateLights(i);
+    section[i].updateLights();
 }
 
 
@@ -100,7 +100,7 @@ void fadeIncrement(uint8_t i, float f, uint8_t color) {
         }
     //}
     
-    updateLights(i);
+    section[i].updateLights();
 }
 
 void masterFadeDecrement(uint8_t i, float f) {
@@ -111,7 +111,7 @@ void masterFadeDecrement(uint8_t i, float f) {
         section[i].isOn = false;
         section[i].masterLevel = 0; // min
     }
-    updateLights(i);
+    section[i].updateLights();
 }
 
 void fadeDecrement(uint8_t i, float f, uint8_t color) {
@@ -132,7 +132,7 @@ void fadeDecrement(uint8_t i, float f, uint8_t color) {
         }
     //}
     
-    updateLights(i);
+    section[i].updateLights();
 }
 
 
@@ -171,7 +171,7 @@ void switchMode(uint8_t nn) {
     }
 
     if ((section[nn].mode != (LOW_CYCLE_STARTS_AT + 1)) && (section[nn].mode != (LOW_CYCLE_STARTS_AT + 2))) { //if not rgb smooth/sudden 
-        updateLights(nn);
+        section[nn].updateLights();
     }    
 }
 
@@ -351,7 +351,7 @@ void progressColorSudden(uint8_t ii) {
         section[ii].RGBW[1] = GREEN_LIST[section[ii].colorState];
         section[ii].RGBW[2] = BLUE_LIST[section[ii].colorState];
 
-        updateLights(ii);
+        section[ii].updateLights();
 
         if (DEBUG) {
             Serial.print(F("color progress state: ")); 
@@ -397,5 +397,5 @@ void progressColorSmooth(uint8_t ii)
             }
         }
     }
-    updateLights(ii);
+    section[ii].updateLights();
 }
