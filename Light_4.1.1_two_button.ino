@@ -37,35 +37,35 @@ const uint8_t NUM_OF_MODES_IN_CYCLE_HIGH = 4;    // red==252, green==253, blue==
 
 const uint8_t SINGLE_COLOR_MODE_OFFSET = HIGH_CYCLE_STARTS_AT; //num req to get to 0 from red mode number
 
-struct btn_t {
-    uint32_t timeReleased; //when was this button released?
-    uint32_t timePressed;  //when was this button pressed?
-    uint8_t pressCt;  //If button is pressed before timeReleased ends, add one to count
-    bool isHeld;        //is the button being held? (for longer than BTN_FADE_DELAY
+// struct btn_t {
+//     uint32_t timeReleased; //when was this button released?
+//     uint32_t timePressed;  //when was this button pressed?
+//     uint8_t pressCt;  //If button is pressed before timeReleased ends, add one to count
+//     bool isHeld;        //is the button being held? (for longer than BTN_FADE_DELAY
 
-} btn[] = {
-    // Inside underloft
-    {0, 0, 0, false}, //entry button up         
-    {0, 0, 0, false}, //entry button down
+// } btn[] = {
+//     // Inside underloft
+//     {0, 0, 0, false}, //entry button up         
+//     {0, 0, 0, false}, //entry button down
 
-    // Outside (Porch)
-    {0, 0, 0, false}, //entry2 button up
-    {0, 0, 0, false}, //entry2 button down
+//     // Outside (Porch)
+//     {0, 0, 0, false}, //entry2 button up
+//     {0, 0, 0, false}, //entry2 button down
 
-    // Kitchen underloft
-    {0, 0, 0, false}, //kitchen left wall
-    {0, 0, 0, false}, //kitchen
+//     // Kitchen underloft
+//     {0, 0, 0, false}, //kitchen left wall
+//     {0, 0, 0, false}, //kitchen
 
-    // Bathroom (back wall right nook)
-    {0, 0, 0, false}, //bath
-    {0, 0, 0, false},
+//     // Bathroom (back wall right nook)
+//     {0, 0, 0, false}, //bath
+//     {0, 0, 0, false},
 
-    //Back wall button
-    // {0, 0, 0, 0, false}, //Back wall (left) / Greenhouse?
-    // {0, 0, 0, 0, false},
+//     //Back wall button
+//     // {0, 0, 0, 0, false}, //Back wall (left) / Greenhouse?
+//     // {0, 0, 0, 0, false},
 
-    //sconce 1 button close button
-};
+//     //sconce 1 button close button
+// };
 
 
 
