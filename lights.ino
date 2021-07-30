@@ -1,21 +1,3 @@
-const float DEFAULT_BRIGHTNESS = 0.60; // 0-1 (percent) value for default brightness when turned on
-const uint8_t COLOR_LOOP_SMOOTH_DELAY_INT = 20; //ms
-const uint16_t COLOR_LOOP_SUDDEN_DELAY_INT = 3000; //ms
-const float COLOR_LOOP_FADE_AMOUNT = 0.001;  // brightness adjust amount per tick
-
-const float _HIGH = 0.95,
-             _MID =  0.85,
-             _LOW = 0.60;
-const uint8_t MAX_COLOR_STATE = 12;
-const float RED_LIST[MAX_COLOR_STATE] =   {1., _HIGH,  _MID, _LOW,     0, 0,       0, 0,           0, _LOW,    _MID, _HIGH },
-            GREEN_LIST[MAX_COLOR_STATE] = {0, _LOW,    _MID, _HIGH,    1., _HIGH,  _MID, _LOW,     0, 0,       0, 0        },
-            BLUE_LIST[MAX_COLOR_STATE] =  {0, 0,       0, 0,           0, _LOW,    _MID, _HIGH,    1., _HIGH,  _MID, _LOW};
-// const uint8_t MAX_COLOR_STATE = 6;
-// const float RED_LIST[] = {1., _MID, 0, 0, 0, _MID};
-// const float GREEN_LIST[] = {0, _MID, 1., _MID, 0, 0};
-// const float BLUE_LIST[] = {0, 0, 0, _MID, 1., _MID};
-
-//*************************************************************
 void extendedFade(uint8_t ii) {
     if (!(section[ii].extendedFade)) {  // if extendedFade is not enabled yet for this section
         //check if mode's regular level is max and if so enable extendedFade
@@ -203,8 +185,7 @@ void switchToWhite(uint8_t nn) { // 1
 }
 
 void switchToRGB(uint8_t nn) { // 2, 3
-    if (!(section[nn].colorProgress)) {
-        //initialize colorProgress
+    if (!(section[nn].colorProgress)) { // initialize colorProgress
         section[nn].colorProgress = true;
         section[nn].colorStartTime = currentTime;
 
@@ -217,9 +198,13 @@ void switchToRGB(uint8_t nn) { // 2, 3
     }
 
     section[nn].colorState = random(MAX_COLOR_STATE);
-    section[nn].RGBW[0] = RED_LIST[section[nn].colorState];
-    section[nn].RGBW[1] = GREEN_LIST[section[nn].colorState];
-    section[nn].RGBW[2] = BLUE_LIST[section[nn].colorState];
+
+    // Progmem version:
+    for (uint8_t color = 0; color < 3; color++) {
+        float value = 0;
+        memcpy_P(&value, &(COLOR_PROGRESS_LIST[color][section[nn].colorState]), sizeof(value)); 
+        section[nn].RGBW[color] = value;
+    }
 
     if (section[nn].mode == (LOW_CYCLE_STARTS_AT + 1)) {
         section[nn].colorDelayInt = COLOR_LOOP_SMOOTH_DELAY_INT;
@@ -282,17 +267,54 @@ void switchToCombined(uint8_t nn) { // 255
 //**********************************************************************
 
 void updateLights(uint8_t i) { // updates a specific light section
+    uint8_t brightnessValue = 0; //index for brightness lookup table
     if (DEBUG) {
-        DEBUG_updateLights(i);
+        uint8_t height = (uint16_t(section[i].RGBW[3] * section[i].masterLevel * TABLE_SIZE) / HEIGHT);
+        uint8_t width = (uint16_t(section[i].RGBW[3] * section[i].masterLevel * TABLE_SIZE) % WIDTH);
 
-    } else {
-        uint8_t brightnessValue = 0; // index for brightness lookup table
+        // look up brighness from table and saves as temp ( sizeof(temp) resolves to 1 [byte of data])
+        memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); 
+
+        if ((section[i].RGBW[3] > 0) && (section[i].masterLevel > 0) && (brightnessValue == 0)) 
+            brightnessValue = 1;
+        
+        Serial.print(F(" lvl:"));   Serial.print(brightnessValue);
+        Serial.print(F("  W: "));    Serial.print(section[i].RGBW[3]);
+        if (section[i].RGBWon[3]) {
+            Serial.print(F("(ON)"));
+        } else {
+            Serial.print(F("(OFF)"));
+        }
+        Serial.print(F(" R: "));    Serial.print(section[i].RGBW[0]);
+        if (section[i].RGBWon[0]) {
+            Serial.print(F("(ON)"));
+        } else {
+            Serial.print(F("(OFF)"));
+        }
+        Serial.print(F(" G: "));    Serial.print(section[i].RGBW[1]);
+        if (section[i].RGBWon[1]) {
+            Serial.print(F("(ON)"));
+        } else {
+            Serial.print(F("(OFF)"));
+        }
+        Serial.print(F(" B: "));    Serial.print(section[i].RGBW[2]);
+        if (section[i].RGBWon[2]) {
+            Serial.print(F("(ON)"));
+        } else {
+            Serial.print(F("(OFF)"));
+        }
+        Serial.print(F(" masterLevel: ")); Serial.print(section[i].masterLevel);
+        if (section[i].isOn) {
+            Serial.print(F("(ON)"));
+        } else {
+            Serial.print(F("(OFF)"));
+        }
+        Serial.print(F(" t:")); Serial.println(currentTime);
+
+    } else { // regular
 
         for (uint8_t color = 0; color < 4; color++) {
-            if (section[i].RGBWon[color]) {
-
-                //brightnessValue = lookupTable(i, color);
-                
+            if (section[i].RGBWon[color]) {                
                 uint8_t height = (uint16_t(section[i].RGBW[color] * section[i].masterLevel * TABLE_SIZE) / HEIGHT);
                 uint8_t width = (uint16_t(section[i].RGBW[color] * section[i].masterLevel * TABLE_SIZE) % WIDTH);
 
@@ -302,10 +324,7 @@ void updateLights(uint8_t i) { // updates a specific light section
                 if ((section[i].RGBW[color] > 0) && (section[i].masterLevel > 0) && (brightnessValue == 0)) 
                     brightnessValue = 1;
                 
-            } else {
-                //brightnessValue = 0;
-                // light is off, so turn it off
-            }
+            } // else light is off, so turn it off
 
             DmxSimple.write((section[i].DMX_OUT * 8) - 8 + (color * 2 + 1), brightnessValue);
             section[i].lastRGBW[color] = section[i].RGBW[color];
@@ -324,7 +343,8 @@ void updateLights(uint8_t i) { // updates a specific light section
         }
 
         if (DEBUG) {
-            DEBUG_updateLightsOff(i);
+            Serial.print(F("MasterBrightness: ")); Serial.println(section[i].masterLevel);
+            Serial.print(F("IsOn:")); Serial.println(section[i].isOn);
         }
     }
 }
@@ -346,10 +366,14 @@ void progressColorSudden(uint8_t ii) {
 
         //section[ii].colorState = random(MAX_COLOR_STATE);
 
-        //set new light color
-        section[ii].RGBW[0] = RED_LIST[section[ii].colorState];
-        section[ii].RGBW[1] = GREEN_LIST[section[ii].colorState];
-        section[ii].RGBW[2] = BLUE_LIST[section[ii].colorState];
+        //Progmem version:
+        for (uint8_t color = 0; color < 3; color++) {
+            float value = 0;
+            memcpy_P(&value, &(COLOR_PROGRESS_LIST[color][section[ii].colorState]), sizeof(value)); 
+            // set new light color
+            section[ii].RGBW[color] = value;
+        }
+
 
         updateLights(ii);
 
@@ -360,11 +384,18 @@ void progressColorSudden(uint8_t ii) {
     }
 }
 
-void progressColorSmooth(uint8_t ii)
-{
-    section[ii].nextRGB[0] = RED_LIST[section[ii].colorState]; // target levels for the current state
-    section[ii].nextRGB[1] = GREEN_LIST[section[ii].colorState];
-    section[ii].nextRGB[2] = BLUE_LIST[section[ii].colorState];
+void progressColorSmooth(uint8_t ii) {
+//     section[ii].nextRGB[0] = RED_LIST[section[ii].colorState]; // target levels for the current state
+//     section[ii].nextRGB[1] = GREEN_LIST[section[ii].colorState];
+//     section[ii].nextRGB[2] = BLUE_LIST[section[ii].colorState];
+
+
+    // Progmem version:
+    for (uint8_t color = 0; color < 3; color++) {
+        float value = 0;
+        memcpy_P(&value, &(COLOR_PROGRESS_LIST[color][section[ii].colorState]), sizeof(value)); 
+        section[ii].nextRGB[color] = value;
+    }
 
     if ((section[ii].RGBW[0] == section[ii].nextRGB[0]) && (section[ii].RGBW[1] == section[ii].nextRGB[1]) && (section[ii].RGBW[2] == section[ii].nextRGB[2])) {
 
@@ -399,3 +430,6 @@ void progressColorSmooth(uint8_t ii)
     }
     updateLights(ii);
 }
+
+
+//*************************************************************

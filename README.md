@@ -16,7 +16,7 @@ timer loop {
         }
         if this section's buttonSignal is LOW {
             for each button {   //gotta process both buttons
-                checkIfTimerIsUpToProcessTheActionFromThePress() -> depending on #ofPresses, do action
+                checkIfTimerIsUpToProcessTheActionFromThePress() . depending on #ofPresses, do action
                 checkIfRecentlyReleased()
             }
 
@@ -314,3 +314,12 @@ TODO:
 TODO:
     Make section a class instead of struct!
     make button a class instead of struct
+
+
+
+
+
+
+TODO:
+Test class: 
+    Switch section to class version, and test using debugger. See if we're getting info.

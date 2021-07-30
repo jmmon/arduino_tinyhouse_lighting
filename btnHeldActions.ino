@@ -1,29 +1,24 @@
-const float FADE_AMOUNT = 0.005;      // base fade adjustment; modified by section[].BRIGHTNESS_FACTOR
-const uint8_t COLOR_LOOP_DELAY_CTR_INT = 5;    // 5 * 20ms (main loop time) per adjustment
-uint16_t colorLoopDelayCtr = 0;
-
-
 void btnHeldActions(uint8_t ii, uint8_t bb) {   // happens every loop after "held delay (230ms)"
-    if (!(section[ii]._btn[bb]->isHeld))
-        section[ii]._btn[bb]->isHeld = true;
+    if (!(section[ii].btn[bb].isHeld))
+        section[ii].btn[bb].isHeld = true;
 
     if (bb == 1) {
-        if (section[ii]._btn[bb]->pressCtr == 3) 
+        if (section[ii].btn[bb].pressCtr == 3) 
             btnTopHeld3p(ii);
-        else if (section[ii]._btn[bb]->pressCtr == 2) 
+        else if (section[ii].btn[bb].pressCtr == 2) 
             btnTopHeld2p(ii);
-        else if (section[ii]._btn[bb]->pressCtr == 1) 
+        else if (section[ii].btn[bb].pressCtr == 1) 
             btnTopHeld1p(ii);
         
     } else { // b == 0
         // disable extended fade while fading down (fades from extended thru to off)
         disableExtendedFade(ii); // bottom, fade down, causes dim without stopping
     
-        if (section[ii]._btn[bb]->pressCtr == 3)
+        if (section[ii].btn[bb].pressCtr == 3)
             btnBotHeld3p(ii);
-        else if (section[ii]._btn[bb]->pressCtr == 2)
+        else if (section[ii].btn[bb].pressCtr == 2)
             btnBotHeld2p(ii);
-        else if (section[ii]._btn[bb]->pressCtr == 1)
+        else if (section[ii].btn[bb].pressCtr == 1)
             btnBotHeld1p(ii);
         
     }
@@ -53,9 +48,9 @@ void btnTopHeld1p(uint8_t ii) {
 
     float tempSpeed = FADE_AMOUNT; // regular fade increment
     
-    if (currentTime >= (section[ii]._btn[1]->timePressed + (BTN_FADE_DELAY * 3))) {
+    if (currentTime >= (section[ii].btn[1].timePressed + (BTN_HELD_DELAY * 3))) {
         tempSpeed *= 4; // double a second time for triple time (so FADE_AMOUNT * (2*2))
-    } else if (currentTime >= (section[ii]._btn[1]->timePressed + (BTN_FADE_DELAY * 2))) {
+    } else if (currentTime >= (section[ii].btn[1].timePressed + (BTN_HELD_DELAY * 2))) {
         tempSpeed *= 2; // double amount after double time
     }
 
@@ -141,10 +136,10 @@ void btnTopHeld3p(uint8_t ii) {
 void btnBotHeld1p(uint8_t ii) {
     //first fade down rgb/white if on, then the current mode fade down.
     float tempSpeed = FADE_AMOUNT; // regular fade decrement
-    if (currentTime >= (section[ii]._btn[0]->timePressed + (BTN_FADE_DELAY * 3)))
+    if (currentTime >= (section[ii].btn[0].timePressed + (BTN_HELD_DELAY * 3)))
         tempSpeed = FADE_AMOUNT * 2 * 2; // quadruple speed after triple time
 
-    else if (currentTime >= (section[ii]._btn[0]->timePressed + (BTN_FADE_DELAY * 2))) 
+    else if (currentTime >= (section[ii].btn[0].timePressed + (BTN_HELD_DELAY * 2))) 
         tempSpeed = FADE_AMOUNT * 2; // double delay speed after double time
 
 

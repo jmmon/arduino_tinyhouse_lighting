@@ -1,8 +1,9 @@
 void setup() {
-    for (uint8_t i = 0; i < SECTION_COUNT; i++) 
-        pinMode(section[i].PIN, INPUT);
+    // for (uint8_t i = 0; i < SECTION_COUNT; i++) 
+    //     pinMode(section[i].PIN, INPUT);
     
     randomSeed(analogRead(0)); // used to start colorProgress state at a random color
+
     loopStartTime = millis();
     currentTime = loopStartTime;
 
@@ -14,8 +15,10 @@ void setup() {
         DmxSimple.maxChannel(CHANNELS);
         DmxSimple.usePin(DMX_PIN);
 
-        for (uint8_t i = 1; i <= CHANNELS; i++)
-            DmxSimple.write(i, 0); // turn off all light channels
+        for (uint8_t i = 1; i <= SECTION_COUNT; i++)
+            for (uint8_t color = 0; color < 4; color++)
+                DmxSimple.write((section[i].DMX_OUT * 8) - 8 + (color * 2 + 1), 0); // turn off all light channels
+            
     }
 }
 
@@ -44,27 +47,35 @@ void loop() {
             for (uint8_t b = 0; b < 2; b++) {       // 2 buttons, bottom and top (0 and 1)s
 
                 if (btnStatus <= 255) { // if no button is pressed: (after press)
-                    if (section[i]._btn[b]->timePressed > 0) {
+                    if (section[i].btn[b].timePressed > 0) {
                         // "register" a release of a button
-                        section[i]._btn[b]->registerRelease();
-                        // section[i]._btn[b]->timePressed = 0; // reset
-                        // section[i]._btn[b]->timeReleased = currentTime; // save the time
+                        section[i].btn[b].registerRelease();
+                        // section[i].btn[b].timePressed = 0; // reset
+                        // section[i].btn[b].timeReleased = currentTime; // save the time
                     }
-                    else if ((section[i]._btn[b]->timeReleased != 0) && (currentTime >= (section[i]._btn[b]->timeReleased + BTN_RELEASE_TIMER))) 
+                    else if ((section[i].btn[b].timeReleased != 0) && (currentTime >= (section[i].btn[b].timeReleased + BTN_RELEASE_TIMER))) 
                         btnRelease(i, b); // after small wait
                     
                 } else if ((btnStatus >= (BTN_RESIST[b] - BTN_RESIST_TOLERANCE)) && (btnStatus <= (BTN_RESIST[b] + BTN_RESIST_TOLERANCE))) { // else btnStatus > 255: register press and/or do "held button" actions
 
                     if (DEBUG) {
-                        DEBUG_heldActions(i, b, btnStatus);
+                        Serial.print(F(" Section:")); Serial.print(i);
+                        Serial.print(F(" Pin:")); Serial.print(section[i].PIN);
+                        Serial.print(F(" BTNread:")); Serial.print(btnStatus); // buttonStatus
+                        Serial.print(F(" | Fade "));
+
+                        if (b == 0) 
+                            Serial.print(F("Down"));
+                        else 
+                            Serial.print(F("Up"));
+
+                        Serial.print(F(": ")); Serial.print(section[i].btn[b].pressCtr); Serial.println(F(" presses"));
                     }
-                    if (section[i]._btn[b]->timePressed == 0) {
-                        // "register" a press of a button
-                        section[i]._btn[b]->registerPress();
-                        // section[i]._btn[b]->pressCtr ++;      // count the press
-                        // section[i]._btn[b]->timePressed = currentTime; // save the time
+
+                    if (section[i].btn[b].timePressed == 0) {
+                        section[i].btn[b].registerPress(); // "register" a press of a button
                     } 
-                    else if (currentTime >= (section[i]._btn[b]->timePressed + BTN_FADE_DELAY)) 
+                    else if (currentTime >= (section[i].btn[b].timePressed + BTN_HELD_DELAY)) 
                         btnHeldActions(i, b);
 
                 }
