@@ -7,7 +7,7 @@ void btnRelease(uint8_t ii, uint8_t bb) {
     
         // if max brightness was hit last button release, enable extended fade for next fade
         if (bb == 1) { // top (fade up)
-            extendedFade(ii);
+            section[ii].enableExtFade();
         }
     
     } else { // else this runs if it was not being held (regular press and release)
@@ -80,12 +80,12 @@ void topAction1press(uint8_t ii) {
                 section[ii].masterLevel = 1;
         }
         
-        updateLights(ii);
+        section[ii].updateLights();
 
     } else { // from off:
         // TODO: use last brightness if available, else default brightness
         section[ii].mode = LOW_CYCLE_STARTS_AT;
-        switchMode(ii);
+        section[ii].switchMode();
     }
 }
 
@@ -102,14 +102,14 @@ void topAction2presses(uint8_t ii) {
         if (section[ii].mode >= (LOW_CYCLE_STARTS_AT + NUM_OF_MODES_IN_CYCLE_LOW) )
             section[ii].mode = LOW_CYCLE_STARTS_AT;
     }
-    switchMode(ii);
+    section[ii].switchMode();
 }
 
 //  TRIPLE PRESS TOP: MAX BRIGHTNESS
 // from on/off (any mode): turn on max brightness
 void topAction3presses(uint8_t ii, uint8_t bb) {
     section[ii].mode = (LOW_CYCLE_STARTS_AT + 3); // max brightness mode
-    switchMode(ii);
+    section[ii].switchMode();
 }
 
 
@@ -131,7 +131,7 @@ void botAction1press(uint8_t n) {
         }
         //turnOffSection(n);
         section[n].mode = 0;
-        switchMode(n);
+        section[n].switchMode();
         //add mode for turn off?
 
     } else { // turn on night light mode
@@ -140,7 +140,7 @@ void botAction1press(uint8_t n) {
         }
 
         section[n].mode = HIGH_CYCLE_STARTS_AT;
-        switchMode(n);
+        section[n].switchMode();
     }
 }
 
@@ -160,7 +160,7 @@ void botAction2presses(uint8_t ii) {
                 section[ii].mode = (LOW_CYCLE_STARTS_AT + NUM_OF_MODES_IN_CYCLE_LOW - 1);   //4 - 1 = 3
         } 
 
-        switchMode(ii);
+        section[ii].switchMode();
     }
 }
 
@@ -176,7 +176,7 @@ void botAction3presses(uint8_t n, uint8_t m) {
             if (section[index].isOn && (index != 2)) {
                 //turnOffSection(index);
                 section[index].mode = 0;
-                switchMode(index);
+                section[index].switchMode();
             }
                 
 
@@ -184,13 +184,13 @@ void botAction3presses(uint8_t n, uint8_t m) {
         if (section[2].isOn) { // nothing else on, porch on
             //turnOffSection(2);
             section[2].mode = 0;
-            switchMode(2);
+                section[2].switchMode();
         }
         else // DISCO MODE // nothing else on, porch off
             for (uint8_t index = 0; index < SECTION_COUNT; index++) {
                 // for each light, switch the mode to (LOW_CYCLE_STARTS_AT + 2) (colorProgress sudden)
                 section[index].mode = (LOW_CYCLE_STARTS_AT + 2);
-                switchMode(index);
+                section[index].switchMode();
             }
     }
 }

@@ -12,7 +12,7 @@ void btnHeldActions(uint8_t ii, uint8_t bb) {   // happens every loop after "hel
         
     } else { // b == 0
         // disable extended fade while fading down (fades from extended thru to off)
-        disableExtendedFade(ii); // bottom, fade down, causes dim without stopping
+        section[ii].DisableExtFade(); // bottom, fade down, causes dim without stopping
     
         if (section[ii].btn[bb].pressCtr == 3)
             btnBotHeld3p(ii);
@@ -46,35 +46,32 @@ void btnTopHeld1p(uint8_t ii) {
     }
     
 
-    float tempSpeed = FADE_AMOUNT; // regular fade increment
+    uint8_t factor = 1; // regular fade increment
     
     if (currentTime >= (section[ii].btn[1].timePressed + (BTN_HELD_DELAY * 3))) {
-        tempSpeed *= 4; // double a second time for triple time (so FADE_AMOUNT * (2*2))
+        factor = 4; // double a second time for triple time (so FADE_AMOUNT * (2*2))
     } else if (currentTime >= (section[ii].btn[1].timePressed + (BTN_HELD_DELAY * 2))) {
-        tempSpeed *= 2; // double amount after double time
+        factor = 2; // double amount after double time
     }
 
 
     if (section[ii].mode == (LOW_CYCLE_STARTS_AT + 3)) { // max brightness
-        masterFadeIncrement(ii, tempSpeed);
-        //fadeIncrement(ii, tempSpeed, NULL);
-    } else if (section[ii].extendedFade) {
+        section[ii].masterInc(factor);
+    } else if (section[ii].fadeExtended) {
         //extended fade
         if (section[ii].mode == LOW_CYCLE_STARTS_AT) { // white
             for (uint8_t color = 0; color < 3; color++) {
-                fadeIncrement(ii, tempSpeed, color); // rgb
+                section[ii].colorInc(factor, color); // rgb
             }
         } else {
-            fadeIncrement(ii, tempSpeed, 3);
+            section[ii].colorInc(factor, 3);
         }
-    } else {
-        //regular fade
+    } else { // regular fade
         if (section[ii].mode == LOW_CYCLE_STARTS_AT || section[ii].mode == (LOW_CYCLE_STARTS_AT + 1) || section[ii].mode == (LOW_CYCLE_STARTS_AT + 2) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 3)) { // white, rgb smooth, sudden;  combined
-            masterFadeIncrement(ii, tempSpeed);
-            //fadeIncrement(ii, tempSpeed, NULL);
+            section[ii].masterInc(factor);
 
         } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) { // r, g, b
-            fadeIncrement(ii, tempSpeed, section[ii].mode-SINGLE_COLOR_MODE_OFFSET);
+            section[ii].colorInc(factor, section[ii].mode-SINGLE_COLOR_MODE_OFFSET);
         }
     }
 }
@@ -135,36 +132,34 @@ void btnTopHeld3p(uint8_t ii) {
 
 void btnBotHeld1p(uint8_t ii) {
     //first fade down rgb/white if on, then the current mode fade down.
-    float tempSpeed = FADE_AMOUNT; // regular fade decrement
+    uint8_t factor = 1; // regular fade decrement
     if (currentTime >= (section[ii].btn[0].timePressed + (BTN_HELD_DELAY * 3)))
-        tempSpeed = FADE_AMOUNT * 2 * 2; // quadruple speed after triple time
+        factor = 4; // quadruple speed after triple time
 
     else if (currentTime >= (section[ii].btn[0].timePressed + (BTN_HELD_DELAY * 2))) 
-        tempSpeed = FADE_AMOUNT * 2; // double delay speed after double time
+        factor = 2; // double delay speed after double time
 
 
 
     if (section[ii].mode == (LOW_CYCLE_STARTS_AT + 3)) { // max brightness
-        masterFadeDecrement(ii, tempSpeed);
-        //fadeDecrement(ii, tempSpeed, NULL);
-    } else if (section[ii].extendedFade) {
-        //extended fade
+        section[ii].masterDec(factor);
+
+    } else if (section[ii].fadeExtended) { // extended fade
         if (section[ii].mode == LOW_CYCLE_STARTS_AT) { // white
             for (uint8_t color = 0; color < 3; color++) {
-                fadeDecrement(ii, tempSpeed, color); // rgb
+                section[ii].colorDec(factor, color); // rgb
             }
         } else {
-            fadeDecrement(ii, tempSpeed, 3);
+            section[ii].colorDec(factor, 3);
         }
-    } else {
-        //regular fade
+
+    } else {//regular fade
         if (section[ii].mode == LOW_CYCLE_STARTS_AT || section[ii].mode == (LOW_CYCLE_STARTS_AT + 1) || section[ii].mode == (LOW_CYCLE_STARTS_AT + 2) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 3)) { // rgb smooth, sudden, combined
-            masterFadeDecrement(ii, tempSpeed);
-            //fadeDecrement(ii, tempSpeed, NULL);
+            section[ii].masterDec(factor);
 
         } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) { // r, g, b
             uint8_t color = section[ii].mode-SINGLE_COLOR_MODE_OFFSET;
-            fadeDecrement(ii, tempSpeed, color);
+            section[ii].colorDec(factor, color);
         }
     }
 }

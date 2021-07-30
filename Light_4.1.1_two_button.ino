@@ -51,7 +51,7 @@ const uint8_t SINGLE_COLOR_MODE_OFFSET = HIGH_CYCLE_STARTS_AT; //num req to get 
 // Brightness:
 
 const float DEFAULT_BRIGHTNESS = 0.60; // 0-1 (percent) value for default brightness when turned on
-const float FADE_AMOUNT = 0.005;      // base fade adjustment; modified by section[].BRIGHTNESS_FACTOR
+const float FADE_AMOUNT = 0.005;      // base fade adjustment; modified by section[].LVL_ADJUST
 
 const float COLOR_LOOP_FADE_AMOUNT = 0.001;  // brightness adjust amount per tick
 
@@ -69,33 +69,7 @@ const uint8_t MAX_COLOR_STATE = 12;
 const float _HIGH = 0.95,
              _MID =  0.85,
              _LOW = 0.60;
-// const float RED_LIST[MAX_COLOR_STATE] =   {
-//                 1., _HIGH,  _MID, _LOW,     
-//                 0, 0,       0, 0,           
-//                 0, _LOW,    _MID, _HIGH 
-//             },
-//             GREEN_LIST[MAX_COLOR_STATE] = {
-//                 0, _LOW,    _MID, _HIGH,    
-//                 1., _HIGH,  _MID, _LOW,     
-//                 0, 0,       0, 0        
-//             },
-//             BLUE_LIST[MAX_COLOR_STATE] =  {
-//                 0, 0,       0, 0,           
-//                 0, _LOW,    _MID, _HIGH,    
-//                 1., _HIGH,  _MID, _LOW
-//             };
-// const uint8_t MAX_COLOR_STATE = 6;
-// const float RED_LIST[] = {1., _MID, 0, 0, 0, _MID};
-// const float GREEN_LIST[] = {0, _MID, 1., _MID, 0, 0};
-// const float BLUE_LIST[] = {0, 0, 0, _MID, 1., _MID};
-
-//Sketch uses 13838 bytes (45%) of program storage space. Maximum is 30720 bytes.
-//Global variables use 1172 bytes (57%) of dynamic memory, leaving 876 bytes for local variables. Maximum is 2048 bytes.
-//144 saved from dynamic; 166 used on progmem
-//Sketch uses 14004 bytes (45%) of program storage space. Maximum is 30720 bytes.
-//Global variables use 1316 bytes (64%) of dynamic memory, leaving 732 bytes for local variables. Maximum is 2048 bytes.
-
-// use progmem for lists
+// use progmem for lists, saves 144 bytes of ram!
 
 const float COLOR_PROGRESS_LIST[3][MAX_COLOR_STATE] PROGMEM = {
     //red

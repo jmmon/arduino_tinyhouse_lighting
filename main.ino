@@ -31,9 +31,9 @@ void loop() {
             if (currentTime >= (section[i].colorStartTime + section[i].colorDelayInt)) { //loop is separate for this, so speed change works well
                 section[i].colorStartTime += section[i].colorDelayInt;
                 if (section[i].mode == (LOW_CYCLE_STARTS_AT + 2)) 
-                    progressColorSudden(i);
+                    section[i].progressColorSudden();
                 else if (section[i].mode == (LOW_CYCLE_STARTS_AT + 1)) 
-                    progressColorSmooth(i);
+                    section[i].progressColorSmooth();
             }
         }
     }
