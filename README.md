@@ -323,3 +323,25 @@ TODO:
 TODO:
 Test class: 
     Switch section to class version, and test using debugger. See if we're getting info.
+
+
+
+
+
+
+
+Idea: 
+Could break each mode into its own class with its own methods?
+
+section[ii].off.set();
+section[ii].RGBSmooth.set();
+section[ii].white.set();
+
+
+
+
+TODO: 
+    Separate buttons into two distinct sections: one for top, one for bottom. That way I can use my classes Btn_Top and Btn_Bot
+
+
+Note: Seems slower now. Classes may have slowed it down?

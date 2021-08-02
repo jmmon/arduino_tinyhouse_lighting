@@ -31,51 +31,7 @@ class Btn_C {
 class Btn_Top : public Btn_C {
     private:
     public:
-        // void hold1() {
-        //     if (!(section[ii].isOn)) {  // if fading up from off, turn "on" the correct light
-        //         section[ii].isOn = true;
-        //         if (section[ii].mode == 0) {
-        //             section[ii].mode = LOW_CYCLE_STARTS_AT;
-        //             section[ii].RGBWon[3] = true; //white on
-        //             section[ii].RGBW[3] = 1;
-        //             section[ii].masterLevel = 0.001; //fixes fade up from off
-        //         } 
-                
-        //         else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) {
-        //             section[ii].RGBWon[section[ii].mode-SINGLE_COLOR_MODE_OFFSET] = true;
-        //         }
-        //     }
-            
-
-        //     uint8_t factor = 1; // regular fade increment
-            
-        //     if (currentTime >= (section[ii].btn[1].timePressed + (BTN_HELD_DELAY * 3))) {
-        //         factor = 4; // double a second time for triple time (so FADE_AMOUNT * (2*2))
-        //     } else if (currentTime >= (section[ii].btn[1].timePressed + (BTN_HELD_DELAY * 2))) {
-        //         factor = 2; // double amount after double time
-        //     }
-
-
-        //     if (section[ii].mode == (LOW_CYCLE_STARTS_AT + 3)) { // max brightness
-        //         section[ii].masterInc(factor);
-        //     } else if (section[ii].fadeExtended) {
-        //         //extended fade
-        //         if (section[ii].mode == LOW_CYCLE_STARTS_AT) { // white
-        //             for (uint8_t color = 0; color < 3; color++) {
-        //                 section[ii].colorInc(factor, color); // rgb
-        //             }
-        //         } else {
-        //             section[ii].colorInc(factor, 3);
-        //         }
-        //     } else { // regular fade
-        //         if (section[ii].mode == LOW_CYCLE_STARTS_AT || section[ii].mode == (LOW_CYCLE_STARTS_AT + 1) || section[ii].mode == (LOW_CYCLE_STARTS_AT + 2) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 3)) { // white, rgb smooth, sudden;  combined
-        //             section[ii].masterInc(factor);
-
-        //         } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) { // r, g, b
-        //             section[ii].colorInc(factor, section[ii].mode-SINGLE_COLOR_MODE_OFFSET);
-        //         }
-        //     }
-        // }
+        
 };
 class Btn_Bot : public Btn_C {
     private:
@@ -136,27 +92,31 @@ class Section { // rebuild of other class? Not sure why class isn't working
             }
         }
 
-        void turnOff(uint8_t color = 4) {
-            if (color = 4) {
+        void turnOff(uint8_t color = 5) {
+            if (color == 5) { //just master (default)
+                isOn = false;
+                masterLevel = 0;
+
+            } else if (color == 4) { //all 4 colors
                 for (uint8_t z = 0; z < 4; z++) {
                     RGBW[z] = 0;
                     RGBWon[z] = false;
                 }
-                isOn = false;
-                masterLevel = 0;
-            } else {
+
+            } else { ///individual color
                 RGBW[color] = 0;
                 RGBWon[color] = false;
             }
         }
 
         void turnOn(uint8_t color = 4) {
+            isOn = true;
             RGBW[color] = 1;
             RGBWon[color] = true;
         }
 
 
-        void updateLights() { // updates this light section
+        void update() { // updates this light section
             uint8_t brightnessValue = 0; //index for brightness lookup table
             if (DEBUG) {
                 uint8_t height = (uint16_t(RGBW[3] * masterLevel * TABLE_SIZE) / HEIGHT);
@@ -167,25 +127,20 @@ class Section { // rebuild of other class? Not sure why class isn't working
                     brightnessValue = 1;
                 
                 Serial.print(F(" t:")); Serial.println(currentTime); Serial.print(F(" lvl:"));   Serial.print(brightnessValue);
-                Serial.print(F("  R: ")); Serial.print(RGBW[0]); Serial.print((RGBWon[0]) ? F("(ON)"):F("(OFF)"));
-                Serial.print(F(" G: ")); Serial.print(RGBW[1]); Serial.print((RGBWon[1]) ? F("(ON)"):F("(OFF)"));
-                Serial.print(F(" B: ")); Serial.print(RGBW[2]); Serial.print((RGBWon[2]) ? F("(ON)"):F("(OFF)"));
-                Serial.print(F(" W: ")); Serial.print(RGBW[3]); Serial.print((RGBWon[3]) ? F("(ON)"):F("(OFF)"));
-                Serial.print(F(" masterLevel: ")); Serial.print(masterLevel); Serial.print((isOn) ? F("(ON)"):F("(OFF)"));
+                Serial.print(F("  R: ")); Serial.print(RGBW[0]); Serial.print((RGBWon[0]) ? F("(ON)") : F("(OFF)"));
+                Serial.print(F(" G: ")); Serial.print(RGBW[1]); Serial.print((RGBWon[1]) ? F("(ON)") : F("(OFF)"));
+                Serial.print(F(" B: ")); Serial.print(RGBW[2]); Serial.print((RGBWon[2]) ? F("(ON)") : F("(OFF)"));
+                Serial.print(F(" W: ")); Serial.print(RGBW[3]); Serial.print((RGBWon[3]) ? F("(ON)") : F("(OFF)"));
+                Serial.print(F(" masterLevel: ")); Serial.print(masterLevel); Serial.print((isOn) ? F("(ON)") : F("(OFF)"));
 
-            } else { // regular function
-
+            } else { // regular update
                 for (uint8_t color = 0; color < 4; color++) {
                     if (RGBWon[color]) {                
                         uint8_t height = (uint16_t(RGBW[color] * masterLevel * TABLE_SIZE) / HEIGHT);
                         uint8_t width = (uint16_t(RGBW[color] * masterLevel * TABLE_SIZE) % WIDTH);
-
-                        // look up brighness from table and saves as uint8_t brightness ( sizeof(brightness) resolves to 1 [byte of data])
+                        // (&savesAsVar, lookUpInTable[height][width], sizeof(var) aka byte)
                         memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); 
-
-                        if ((RGBW[color] > 0) && (masterLevel > 0) && (brightnessValue == 0)) 
-                            brightnessValue = 1;
-                        
+                        if ((RGBW[color] > 0) && (masterLevel > 0) && (brightnessValue == 0)) brightnessValue = 1;
                     } // else light is off, so turn it off
 
                     DmxSimple.write((DMX_OUT * 8) - 8 + (color * 2 + 1), brightnessValue);
@@ -194,11 +149,11 @@ class Section { // rebuild of other class? Not sure why class isn't working
             }
                 
             if ( (RGBW[0] <= 0) && (RGBW[1] <= 0) && (RGBW[2] <= 0) && (RGBW[3] <= 0) ) {
-                turnOff();
+                turnOff(4); ///turn off  colors
+                turnOff();  //turn off maaster
 
                 if (DEBUG) {
-                    Serial.print(F("MasterBrightness: ")); Serial.println(masterLevel);
-                    Serial.print(F("IsOn:")); Serial.println(isOn);
+                    Serial.print(F("MasterBrightness: ")); Serial.println(masterLevel); Serial.print((isOn) ? F("(ON)") : F("(OFF)"));
                 }
             }
         }
@@ -236,7 +191,7 @@ class Section { // rebuild of other class? Not sure why class isn't working
                     }
                 }
             }
-            updateLights();
+            update();
         }
 
         void progressColorSudden() {
@@ -257,7 +212,7 @@ class Section { // rebuild of other class? Not sure why class isn't working
                     RGBW[color] = value;
                 }
 
-                updateLights();
+                update();
 
                 if (DEBUG) {
                     Serial.print(F("color progress state: ")); Serial.println(colorState);
@@ -273,20 +228,20 @@ class Section { // rebuild of other class? Not sure why class isn't working
                 Serial.print(F("Now in mode: ")); Serial.println(mode);
             }
 
-            isOn = true;
 
             switch (mode) {
                 case (0): // off
                         colorProgress = false;
                         fadeExtended = false;
                         saveColor();
-                        turnOff(); // all
+                        turnOff(4); //colors
+                        turnOff(); // master
                     break;
                 case (LOW_CYCLE_STARTS_AT): // white
                         colorProgress = false;
-                        turnOff();
+                        turnOff(4); //colors
+                        turnOff(); // master
                         turnOn(3);
-                        isOn = true;
                         masterLevel = LVL_ADJUST * DEFAULT_BRIGHTNESS;
                     break;
 
@@ -309,14 +264,18 @@ class Section { // rebuild of other class? Not sure why class isn't working
                             RGBW[color] = value;
                         }
 
-                        colorDelayInt = (mode == (LOW_CYCLE_STARTS_AT + 1)) ? COLOR_LOOP_SMOOTH_DELAY_INT: COLOR_LOOP_SUDDEN_DELAY_INT;
+                        colorDelayInt = (mode == (LOW_CYCLE_STARTS_AT + 1)) ? 
+                            COLOR_LOOP_SMOOTH_DELAY_INT: 
+                            COLOR_LOOP_SUDDEN_DELAY_INT;
                     break;
+
                 case (LOW_CYCLE_STARTS_AT + 3):   //max brightness
                         for (uint8_t color = 0; color < 4; color++) {
                            turnOn(color);
                         }
                         masterLevel = 1;
                     break;
+
                 case (HIGH_CYCLE_STARTS_AT):        // r
                 case (HIGH_CYCLE_STARTS_AT + 1):    // g
                 case (HIGH_CYCLE_STARTS_AT + 2):    // b
@@ -328,13 +287,13 @@ class Section { // rebuild of other class? Not sure why class isn't working
                             }
                         }
                         turnOff(3); // white
-                        // RGBW[mode-SINGLE_COLOR_MODE_OFFSET] = LVL_ADJUST * DEFAULT_BRIGHTNESS * 2 / 3;
-                        RGBWon[mode-SINGLE_COLOR_MODE_OFFSET] = true;
+                        RGBWon[mode - SINGLE_COLOR_MODE_OFFSET] = true;
                         masterLevel = 1;
                     break;
 
                 case (HIGH_CYCLE_STARTS_AT + 3): // combined
                         // fade with masterLevel, extend with white
+                        isOn = true;
                         for (uint8_t color = 0; color < 3; color++) {
                             RGBWon[color] = true;
                         }
@@ -361,65 +320,58 @@ class Section { // rebuild of other class? Not sure why class isn't working
             }
 
             if ((mode != (LOW_CYCLE_STARTS_AT + 1)) && (mode != (LOW_CYCLE_STARTS_AT + 2))) { //if not rgb smooth/sudden 
-                updateLights();
+                update();
             }    
         }
 
-        // Fade tick functions:
-        void masterInc(uint8_t f) {
+        void colorInc(uint8_t f, uint8_t color = 4) {
             float temp = LVL_ADJUST * FADE_AMOUNT * f;
             if (!isOn) isOn = true;
-            masterLevel += temp;
-            if (masterLevel > 1.0) masterLevel = 1.0; // max
-            updateLights();
-        }
 
+            if (color == 4) { ///master fade
+                masterLevel += temp;
+                if (masterLevel > 1.0) masterLevel = 1.0; // max
 
-        void colorInc(uint8_t f, uint8_t color) {
-            float temp = LVL_ADJUST * FADE_AMOUNT * f;
-            if (!RGBWon[color]) RGBWon[color] = true;
-            RGBW[color] += temp;
-            if (RGBW[color] > 1) RGBW[color] = 1; // max
-            updateLights();
-        }
-
-        void masterDec(uint8_t f) {
-            float temp = LVL_ADJUST * FADE_AMOUNT * f;
-            masterLevel -= temp;
-            if (masterLevel <= 0) {
-                isOn = false;
-                masterLevel = 0; // min
+            } else { ////color fade
+                if (!RGBWon[color]) RGBWon[color] = true;
+                RGBW[color] += temp;
+                if (RGBW[color] > 1.0) RGBW[color] = 1.0; // max
             }
-            updateLights();
+            update();
         }
 
-        void colorDec(uint8_t f, uint8_t color) {
+        void colorDec(uint8_t f, uint8_t color = 4) {
             float temp = LVL_ADJUST * FADE_AMOUNT * f;
-            RGBW[color] -= temp;
-            if (RGBW[color] <= 0) {
-                RGBWon[color] = false;
-                RGBW[color] = 0; // min
+            if (color == 4) { //master
+                masterLevel -= temp;
+                if (masterLevel <= 0) {
+                    turnOff(); //master off
+                }
+
+            } else { //reg
+                RGBW[color] -= temp;
+                if (RGBW[color] <= 0) {
+                    turnOff(color);
+                }
             }
-            updateLights();
+            update();
         }
 
         void enableExtFade() { // check if mode's regular level is max and if so enable fadeExtended
             if (!(fadeExtended)) {
                 switch(mode) {
-                    case(LOW_CYCLE_STARTS_AT): // white 
-                        if (masterLevel >= 1) fadeExtended = true;
-                        break;
-                    case(LOW_CYCLE_STARTS_AT + 1):
-                    case(LOW_CYCLE_STARTS_AT + 2):// RGB Smooth // RGB Sudden
-                        if (masterLevel >= 1)  fadeExtended = true;
-                        break;
-                    case(HIGH_CYCLE_STARTS_AT):
-                    case(HIGH_CYCLE_STARTS_AT + 1):
-                    case(HIGH_CYCLE_STARTS_AT + 2): // Red // Green // Blue
-                        if (RGBW[mode-SINGLE_COLOR_MODE_OFFSET] >= 1)  fadeExtended = true;
-                        break;
-                    case(HIGH_CYCLE_STARTS_AT + 3):// combined
+                    case(LOW_CYCLE_STARTS_AT): // white         extends with RGB
+                    case(LOW_CYCLE_STARTS_AT + 1):                     // extends with W
+                    case(LOW_CYCLE_STARTS_AT + 2):// RGB Smooth // RGB Sudden extends with W
+                    case(HIGH_CYCLE_STARTS_AT + 3):// combined              extends with W
                         if ( masterLevel >= 1 ) fadeExtended = true;
+                        //these colors use 
+                        break;
+
+                    case(HIGH_CYCLE_STARTS_AT):                         // extends with w
+                    case(HIGH_CYCLE_STARTS_AT + 1):                     // extends with w
+                    case(HIGH_CYCLE_STARTS_AT + 2): // Red // Green // Blue extends with w
+                        if (RGBW[mode-SINGLE_COLOR_MODE_OFFSET] >= 1)  fadeExtended = true;
                         break;
                 }
             }
@@ -431,14 +383,62 @@ class Section { // rebuild of other class? Not sure why class isn't working
                     case(LOW_CYCLE_STARTS_AT): // white
                         if ( RGBW[0] <= 0 && RGBW[1] <= 0 && RGBW[2] <= 0 )  fadeExtended = false;
                         break;
+
                     case(LOW_CYCLE_STARTS_AT + 1):
-                    case(LOW_CYCLE_STARTS_AT + 2):
+                    case(LOW_CYCLE_STARTS_AT + 2): // RGB Smooth // RGB Sudden
                     case(HIGH_CYCLE_STARTS_AT):
                     case(HIGH_CYCLE_STARTS_AT + 1):
                     case(HIGH_CYCLE_STARTS_AT + 2):
-                    case(HIGH_CYCLE_STARTS_AT + 3): // Red // Green // Blue // Combined // RGB Smooth // RGB Sudden
+                    case(HIGH_CYCLE_STARTS_AT + 3): // Red // Green // Blue // Combined
                         if (RGBW[3] <= 0) fadeExtended = false;
                         break;
+                }
+            }
+        }
+
+
+
+
+
+
+
+
+
+        void btnTopHeld1p() {
+            if (!(isOn)) {  // if fading up from off, turn "on" the correct light
+                isOn = true;
+                if (mode == 0) {
+                    mode = LOW_CYCLE_STARTS_AT;
+                    turnOn(3);// white on
+                    masterLevel = 0.001; //fixes fade up from off
+                } 
+                
+                else if (mode == HIGH_CYCLE_STARTS_AT || mode == (HIGH_CYCLE_STARTS_AT + 1) || mode == (HIGH_CYCLE_STARTS_AT + 2)) {
+                    RGBWon[mode-SINGLE_COLOR_MODE_OFFSET] = true;
+                }
+            }
+            uint8_t factor = (currentTime >= (btn[1].timePressed + (BTN_HELD_DELAY * 3))) ? 4 :
+                            (currentTime >= (btn[1].timePressed + (BTN_HELD_DELAY * 2))) ? 2 :
+                            1;
+
+            if (mode == (LOW_CYCLE_STARTS_AT + 3)) { // max brightness
+                colorInc(factor);
+
+            } else if (fadeExtended) {
+                if (mode == LOW_CYCLE_STARTS_AT) { // white
+                    for (uint8_t color = 0; color < 3; color++) {
+                        colorInc(factor, color); // rgb
+                    }
+                } else {
+                    colorInc(factor, 3);
+                }
+
+            } else { // regular fade
+                if (mode == LOW_CYCLE_STARTS_AT || mode == (LOW_CYCLE_STARTS_AT + 1) || mode == (LOW_CYCLE_STARTS_AT + 2) || mode == (HIGH_CYCLE_STARTS_AT + 3)) { // white, rgb smooth, sudden;  combined
+                    colorInc(factor);
+
+                } else if (mode == HIGH_CYCLE_STARTS_AT || mode == (HIGH_CYCLE_STARTS_AT + 1) || mode == (HIGH_CYCLE_STARTS_AT + 2)) { // r, g, b
+                    colorInc(factor, mode-SINGLE_COLOR_MODE_OFFSET);
                 }
             }
         }

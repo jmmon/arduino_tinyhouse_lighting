@@ -56,7 +56,7 @@ void btnTopHeld1p(uint8_t ii) {
 
 
     if (section[ii].mode == (LOW_CYCLE_STARTS_AT + 3)) { // max brightness
-        section[ii].masterInc(factor);
+        section[ii].colorInc(factor);
     } else if (section[ii].fadeExtended) {
         //extended fade
         if (section[ii].mode == LOW_CYCLE_STARTS_AT) { // white
@@ -68,7 +68,7 @@ void btnTopHeld1p(uint8_t ii) {
         }
     } else { // regular fade
         if (section[ii].mode == LOW_CYCLE_STARTS_AT || section[ii].mode == (LOW_CYCLE_STARTS_AT + 1) || section[ii].mode == (LOW_CYCLE_STARTS_AT + 2) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 3)) { // white, rgb smooth, sudden;  combined
-            section[ii].masterInc(factor);
+            section[ii].colorInc(factor);
 
         } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) { // r, g, b
             section[ii].colorInc(factor, section[ii].mode-SINGLE_COLOR_MODE_OFFSET);
@@ -113,13 +113,10 @@ void btnTopHeld2p(uint8_t ii) {
      */
 }
 
-void btnTopHeld3p(uint8_t ii) {
+void btnTopHeld3p(uint8_t ii) { // speed up colorProgress (decrease delay)
     if ((section[ii].mode == (LOW_CYCLE_STARTS_AT + 1)) || (section[ii].mode == (LOW_CYCLE_STARTS_AT + 2))) {
-        // speed up colorProgress (decrease delay)
         if (colorLoopDelayCtr == COLOR_LOOP_DELAY_CTR_INT) {   
-            if (section[ii].colorDelayInt > 1)
-                section[ii].colorDelayInt--;
-            
+            section[ii].colorDelayInt = (section[ii].colorDelayInt > 1) ? section[ii].colorDelayInt - 1: 0;
             colorLoopDelayCtr = 0;
 
         } else 
@@ -142,7 +139,7 @@ void btnBotHeld1p(uint8_t ii) {
 
 
     if (section[ii].mode == (LOW_CYCLE_STARTS_AT + 3)) { // max brightness
-        section[ii].masterDec(factor);
+        section[ii].colorDec(factor);
 
     } else if (section[ii].fadeExtended) { // extended fade
         if (section[ii].mode == LOW_CYCLE_STARTS_AT) { // white
@@ -155,7 +152,7 @@ void btnBotHeld1p(uint8_t ii) {
 
     } else {//regular fade
         if (section[ii].mode == LOW_CYCLE_STARTS_AT || section[ii].mode == (LOW_CYCLE_STARTS_AT + 1) || section[ii].mode == (LOW_CYCLE_STARTS_AT + 2) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 3)) { // rgb smooth, sudden, combined
-            section[ii].masterDec(factor);
+            section[ii].colorDec(factor);
 
         } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) { // r, g, b
             uint8_t color = section[ii].mode-SINGLE_COLOR_MODE_OFFSET;

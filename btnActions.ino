@@ -80,7 +80,7 @@ void topAction1press(uint8_t ii) {
                 section[ii].masterLevel = 1;
         }
         
-        section[ii].updateLights();
+        section[ii].update();
 
     } else { // from off:
         // TODO: use last brightness if available, else default brightness
