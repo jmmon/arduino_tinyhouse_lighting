@@ -1,21 +1,3 @@
-const float DEFAULT_BRIGHTNESS = 0.60; // 0-1 (percent) value for default brightness when turned on
-const uint8_t COLOR_LOOP_SMOOTH_DELAY_INT = 20; //ms
-const uint16_t COLOR_LOOP_SUDDEN_DELAY_INT = 3000; //ms
-const float COLOR_LOOP_FADE_AMOUNT = 0.001;  // brightness adjust amount per tick
-
-const float _HIGH = 0.95,
-             _MID =  0.85,
-             _LOW = 0.60;
-const uint8_t MAX_COLOR_STATE = 12;
-const float RED_LIST[MAX_COLOR_STATE] =   {1., _HIGH,  _MID, _LOW,     0, 0,       0, 0,           0, _LOW,    _MID, _HIGH },
-            GREEN_LIST[MAX_COLOR_STATE] = {0, _LOW,    _MID, _HIGH,    1., _HIGH,  _MID, _LOW,     0, 0,       0, 0        },
-            BLUE_LIST[MAX_COLOR_STATE] =  {0, 0,       0, 0,           0, _LOW,    _MID, _HIGH,    1., _HIGH,  _MID, _LOW};
-// const uint8_t MAX_COLOR_STATE = 6;
-// const float RED_LIST[] = {1., _MID, 0, 0, 0, _MID};
-// const float GREEN_LIST[] = {0, _MID, 1., _MID, 0, 0};
-// const float BLUE_LIST[] = {0, 0, 0, _MID, 1., _MID};
-
-//*************************************************************
 void extendedFade(uint8_t ii) {
     if (!(section[ii].extendedFade)) {  // if extendedFade is not enabled yet for this section
         //check if mode's regular level is max and if so enable extendedFade
@@ -35,7 +17,7 @@ void extendedFade(uint8_t ii) {
             } // else hasn't hit max yet
 
         } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2) ) { // Red // Green // Blue
-            if (section[ii].RGBW[section[ii].mode-SINGLE_COLOR_MODE_OFFSET] >= 1) {
+            if (section[ii].RGBW[section[ii].mode-HIGH_CYCLE_STARTS_AT] >= 1) {
                 section[ii].extendedFade = true;
             } // else hasn't hit max yet
 
@@ -72,41 +54,31 @@ void disableExtendedFade(uint8_t ii) {
 // Fade tick functions:
 void masterFadeIncrement(uint8_t i, float f) {
     //master fade
-    float temp = section[i].BRIGHTNESS_FACTOR * f;
     section[i].isOn = true;
-    section[i].masterLevel += temp;
-    if (section[i].masterLevel > 1.0) {
-        section[i].masterLevel = 1.0; // max
-    }
+    section[i].masterLevel = ((section[i].masterLevel + f) > 1.0) ? 1.0 : (section[i].masterLevel + f);
+
     updateLights(i);
 }
 
 
-void fadeIncrement(uint8_t i, float f, uint8_t color) {
-    float temp = section[i].BRIGHTNESS_FACTOR * f;
-    // if (color == NULL) {
-    //     //master fade
-    //     section[i].isOn = true;
-    //     section[i].masterLevel += temp;
-    //     if (section[i].masterLevel > 1) {
-    //         section[i].masterLevel = 1; // max
-    //     }
-    // } else {
-        //regular fade
+void fadeIncrement(uint8_t i, float f, uint8_t color = 4) {
+    if (color == 4) {
+        section[i].isOn = true;
+        section[i].masterLevel = ((section[i].masterLevel + f) > 1.0) ? 1.0 : (section[i].masterLevel + f);
+
+    } else {
         section[i].RGBWon[color] = true;
-        section[i].RGBW[color] += temp;
-        if (section[i].RGBW[color] > 1) {
-            section[i].RGBW[color] = 1; // max
-        }
-    //}
+        section[i].RGBW[color] = ((section[i].RGBW[color] + f) > 1.0) ? 1.0 : (section[i].RGBW[color] + f);
+
+    }
     
     updateLights(i);
 }
 
 void masterFadeDecrement(uint8_t i, float f) {
     //master fade
-    float temp = section[i].BRIGHTNESS_FACTOR * f;
-    section[i].masterLevel -= temp;
+    
+    section[i].masterLevel -= f;
     if (section[i].masterLevel < 0) {
         section[i].isOn = false;
         section[i].masterLevel = 0; // min
@@ -114,24 +86,23 @@ void masterFadeDecrement(uint8_t i, float f) {
     updateLights(i);
 }
 
-void fadeDecrement(uint8_t i, float f, uint8_t color) {
-    float temp = section[i].BRIGHTNESS_FACTOR * f;
-    // if (color == NULL) {
-    //     //master fade
-    //     section[i].masterLevel -= temp;
-    //     if (section[i].masterLevel < 0) {
-    //         section[i].isOn = false;
-    //         section[i].masterLevel = 0; // min
-    //     }
-    // } else {
+void fadeDecrement(uint8_t i, float f, uint8_t color = 4) {
+    if (color == 4) {
+        section[i].masterLevel -= f;
+        if (section[i].masterLevel < 0) {
+            section[i].isOn = false;
+            section[i].masterLevel = 0; // min
+        }
+    } else {
         //regular fade
-        section[i].RGBW[color] -= temp;
+        section[i].RGBW[color] -= f;
         if (section[i].RGBW[color] < 0) {
             section[i].RGBWon[color] = false;
             section[i].RGBW[color] = 0; // min
         }
-    //}
-    
+
+    }
+
     updateLights(i);
 }
 
@@ -140,8 +111,7 @@ void fadeDecrement(uint8_t i, float f, uint8_t color) {
 
 void switchMode(uint8_t nn) {
     if (DEBUG) {
-        Serial.print(F("Now in mode: "));
-        Serial.println(section[nn].mode);
+        Serial.print(F("Now in mode: ")); Serial.println(section[nn].mode);
     }
 
     section[nn].isOn = true;
@@ -221,12 +191,7 @@ void switchToRGB(uint8_t nn) { // 2, 3
     section[nn].RGBW[1] = GREEN_LIST[section[nn].colorState];
     section[nn].RGBW[2] = BLUE_LIST[section[nn].colorState];
 
-    if (section[nn].mode == (LOW_CYCLE_STARTS_AT + 1)) {
-        section[nn].colorDelayInt = COLOR_LOOP_SMOOTH_DELAY_INT;
-
-    } else { // mode == (LOW_CYCLE_STARTS_AT + 2)
-        section[nn].colorDelayInt = COLOR_LOOP_SUDDEN_DELAY_INT;
-    }
+    section[nn].colorDelayInt = (section[nn].mode == (LOW_CYCLE_STARTS_AT + 1)) ? COLOR_LOOP_SMOOTH_DELAY_INT : COLOR_LOOP_SUDDEN_DELAY_INT;
 }
 
 void switchToMax(uint8_t nn) { // 4
@@ -241,7 +206,8 @@ void switchToMax(uint8_t nn) { // 4
 }
 
 
-void switchToSingleColor(uint8_t nn) { // 252-254
+void switchToSingleColor(uint8_t nn) {
+    section[nn].isOn = true;
     section[nn].RGBWon[3] = false; // turn off white
     section[nn].RGBW[3] = 0;
     
@@ -251,8 +217,8 @@ void switchToSingleColor(uint8_t nn) { // 252-254
             section[nn].RGBW[color] = section[nn].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS * 2 / 3;
         }
     }
-    // section[nn].RGBW[section[nn].mode-SINGLE_COLOR_MODE_OFFSET] = section[nn].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS * 2 / 3;
-    section[nn].RGBWon[section[nn].mode-SINGLE_COLOR_MODE_OFFSET] = true;
+    // section[nn].RGBW[section[nn].mode-HIGH_CYCLE_STARTS_AT] = section[nn].BRIGHTNESS_FACTOR * DEFAULT_BRIGHTNESS * 2 / 3;
+    section[nn].RGBWon[section[nn].mode-HIGH_CYCLE_STARTS_AT] = true;
     section[nn].masterLevel = 1;
     
     updateLights(nn);
@@ -285,16 +251,43 @@ void switchToCombined(uint8_t nn) { // 255
     
     updateLights(nn);
 }
-//**********************************************************************
+
+//********************************************************************************************************************
+void DEBUG_updateLights(uint8_t ii) {
+    //uint8_t brightnessValue = lookupTable(ii, 3); //index for brightness lookup table
+    uint8_t brightnessValue = 0; //index for brightness lookup table
+
+    uint8_t height = (uint16_t(section[ii].RGBW[3] * section[ii].masterLevel * TABLE_SIZE) / HEIGHT);
+    uint8_t width = (uint16_t(section[ii].RGBW[3] * section[ii].masterLevel * TABLE_SIZE) % WIDTH);
+
+    // look up brighness from table and saves as temp ( sizeof(temp) resolves to 1 [byte of data])
+    memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); 
+
+    if ((section[ii].RGBW[3] > 0) && (section[ii].masterLevel > 0) && (brightnessValue == 0)) 
+        brightnessValue = 1;
+    
+
+    Serial.print(F("table_w:"));    Serial.print(width);
+    Serial.print(F(", table_h:"));  Serial.print(height);
+    
+    Serial.print(F(" lvl:"));   Serial.print(brightnessValue);  Serial.print(F("  "));
+    Serial.print((section[ii].RGBWon[3]) ? F("   W:"): F(" !!W:"));    Serial.print(section[ii].RGBW[3]);
+    Serial.print((section[ii].RGBWon[0]) ? F("   R:"): F(" !!R:"));    Serial.print(section[ii].RGBW[0]);
+    Serial.print((section[ii].RGBWon[1]) ? F("   G:"): F(" !!G:"));    Serial.print(section[ii].RGBW[1]);
+    Serial.print((section[ii].RGBWon[2]) ? F("   B:"): F(" !!B:"));    Serial.print(section[ii].RGBW[2]);
+    Serial.print((section[ii].isOn) ? F(" Master level: "): F(" !!Master level: ")); Serial.print(section[ii].masterLevel);
+    Serial.print(F(" cur_t:")); Serial.println(currentTime);
+}
+
 
 void updateLights(uint8_t i) { // updates a specific light section
     if (DEBUG) {
         DEBUG_updateLights(i);
 
     } else {
-        uint8_t brightnessValue = 0; // index for brightness lookup table
 
         for (uint8_t color = 0; color < 4; color++) {
+            uint8_t brightnessValue = 0; // index for brightness lookup table
             if (section[i].RGBWon[color]) {                
                 uint8_t height = (uint16_t(section[i].RGBW[color] * section[i].masterLevel * TABLE_SIZE) / HEIGHT);
                 uint8_t width = (uint16_t(section[i].RGBW[color] * section[i].masterLevel * TABLE_SIZE) % WIDTH);
@@ -313,7 +306,6 @@ void updateLights(uint8_t i) { // updates a specific light section
     }
         
     if ( (section[i].RGBW[0] <= 0) && (section[i].RGBW[1] <= 0) && (section[i].RGBW[2] <= 0) && (section[i].RGBW[3] <= 0) ) {
-        //switch to mode 0?
 
         section[i].isOn = false;
         section[i].masterLevel = 0;
@@ -324,13 +316,14 @@ void updateLights(uint8_t i) { // updates a specific light section
         }
 
         if (DEBUG) {
-            DEBUG_updateLightsOff(i);
+            Serial.print(F("MasterBrightness: ")); Serial.println(section[i].masterLevel);
+            Serial.print(F("IsOn:")); Serial.println(section[i].isOn);
         }
     }
 }
 
 
-//***************************************************************************
+//********************************************************************************************************************
 // color progress functions:
 
 void progressColorSudden(uint8_t ii) {
@@ -340,9 +333,7 @@ void progressColorSudden(uint8_t ii) {
     else {
         section[ii].colorDelayCtr = 0;
 
-        section[ii].colorState += 1;
-        if (section[ii].colorState == MAX_COLOR_STATE) 
-            section[ii].colorState = 0;
+        section[ii].colorState = ((section[ii].colorState + 1) == MAX_COLOR_STATE) ? 0 : section[ii].colorState + 1;
 
         //section[ii].colorState = random(MAX_COLOR_STATE);
 
@@ -360,17 +351,14 @@ void progressColorSudden(uint8_t ii) {
     }
 }
 
-void progressColorSmooth(uint8_t ii)
-{
+void progressColorSmooth(uint8_t ii) {
     section[ii].nextRGB[0] = RED_LIST[section[ii].colorState]; // target levels for the current state
     section[ii].nextRGB[1] = GREEN_LIST[section[ii].colorState];
     section[ii].nextRGB[2] = BLUE_LIST[section[ii].colorState];
 
     if ((section[ii].RGBW[0] == section[ii].nextRGB[0]) && (section[ii].RGBW[1] == section[ii].nextRGB[1]) && (section[ii].RGBW[2] == section[ii].nextRGB[2])) {
 
-        section[ii].colorState += 1;
-        if (section[ii].colorState == MAX_COLOR_STATE) 
-            section[ii].colorState = 0;
+        section[ii].colorState = ((section[ii].colorState + 1) == MAX_COLOR_STATE) ? 0 : section[ii].colorState + 1;
         
         if (DEBUG) {
             Serial.print(F("color progress state: ")); 
@@ -382,18 +370,11 @@ void progressColorSmooth(uint8_t ii)
 
             if (section[ii].RGBW[color] < section[ii].nextRGB[color]) {
 
-                section[ii].RGBW[color] += COLOR_LOOP_FADE_AMOUNT;
-
-                if (section[ii].RGBW[color] >= section[ii].nextRGB[color])
-                    section[ii].RGBW[color] = section[ii].nextRGB[color];
-                
+                section[ii].RGBW[color] = ((section[ii].RGBW[color] + COLOR_LOOP_FADE_AMOUNT) >= section[ii].nextRGB[color]) ? section[ii].nextRGB[color] : section[ii].RGBW[color] + COLOR_LOOP_FADE_AMOUNT;
             }
             else if (section[ii].RGBW[color] > section[ii].nextRGB[color]) {
 
-                section[ii].RGBW[color] -= COLOR_LOOP_FADE_AMOUNT;
-
-                if (section[ii].RGBW[color] <= section[ii].nextRGB[color]) 
-                    section[ii].RGBW[color] = section[ii].nextRGB[color];
+                section[ii].RGBW[color] = ((section[ii].RGBW[color] - COLOR_LOOP_FADE_AMOUNT) <= section[ii].nextRGB[color]) ? section[ii].nextRGB[color] : section[ii].RGBW[color] - COLOR_LOOP_FADE_AMOUNT;
             }
         }
     }

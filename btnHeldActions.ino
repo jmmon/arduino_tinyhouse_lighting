@@ -1,8 +1,3 @@
-const float FADE_AMOUNT = 0.005;      // base fade adjustment; modified by section[].BRIGHTNESS_FACTOR
-const uint8_t COLOR_LOOP_DELAY_CTR_INT = 5;    // 5 * 20ms (main loop time) per adjustment
-uint16_t colorLoopDelayCtr = 0;
-
-
 void btnHeldActions(uint8_t ii, uint8_t bb) {   // happens every loop after "held delay (230ms)"
     if (!(section[ii]._btn[bb]->isHeld))
         section[ii]._btn[bb]->isHeld = true;
@@ -31,7 +26,7 @@ void btnHeldActions(uint8_t ii, uint8_t bb) {   // happens every loop after "hel
 
 
 
-//**********************************************************************
+//**********************************************************************************************************
 
 
 
@@ -46,7 +41,7 @@ void btnTopHeld1p(uint8_t ii) {
         } 
         
         else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) {
-            section[ii].RGBWon[section[ii].mode-SINGLE_COLOR_MODE_OFFSET] = true;
+            section[ii].RGBWon[section[ii].mode-HIGH_CYCLE_STARTS_AT] = true;
         }
     }
     
@@ -59,10 +54,11 @@ void btnTopHeld1p(uint8_t ii) {
         tempSpeed *= 2; // double amount after double time
     }
 
+    tempSpeed *= section[ii].BRIGHTNESS_FACTOR;
 
     if (section[ii].mode == (LOW_CYCLE_STARTS_AT + 3)) { // max brightness
-        masterFadeIncrement(ii, tempSpeed);
-        //fadeIncrement(ii, tempSpeed, NULL);
+        ///masterFadeIncrement(ii, tempSpeed);
+        fadeIncrement(ii, tempSpeed);
     } else if (section[ii].extendedFade) {
         //extended fade
         if (section[ii].mode == LOW_CYCLE_STARTS_AT) { // white
@@ -75,11 +71,11 @@ void btnTopHeld1p(uint8_t ii) {
     } else {
         //regular fade
         if (section[ii].mode == LOW_CYCLE_STARTS_AT || section[ii].mode == (LOW_CYCLE_STARTS_AT + 1) || section[ii].mode == (LOW_CYCLE_STARTS_AT + 2) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 3)) { // white, rgb smooth, sudden;  combined
-            masterFadeIncrement(ii, tempSpeed);
-            //fadeIncrement(ii, tempSpeed, NULL);
+            /////masterFadeIncrement(ii, tempSpeed);
+            fadeIncrement(ii, tempSpeed);
 
         } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) { // r, g, b
-            fadeIncrement(ii, tempSpeed, section[ii].mode-SINGLE_COLOR_MODE_OFFSET);
+            fadeIncrement(ii, tempSpeed, section[ii].mode-HIGH_CYCLE_STARTS_AT);
         }
     }
 }
@@ -147,11 +143,11 @@ void btnBotHeld1p(uint8_t ii) {
     else if (currentTime >= (section[ii]._btn[0]->timePressed + (BTN_FADE_DELAY * 2))) 
         tempSpeed = FADE_AMOUNT * 2; // double delay speed after double time
 
-
+    tempSpeed *= section[ii].BRIGHTNESS_FACTOR;
 
     if (section[ii].mode == (LOW_CYCLE_STARTS_AT + 3)) { // max brightness
-        masterFadeDecrement(ii, tempSpeed);
-        //fadeDecrement(ii, tempSpeed, NULL);
+        ///masterFadeDecrement(ii, tempSpeed);
+        fadeDecrement(ii, tempSpeed);
     } else if (section[ii].extendedFade) {
         //extended fade
         if (section[ii].mode == LOW_CYCLE_STARTS_AT) { // white
@@ -164,11 +160,11 @@ void btnBotHeld1p(uint8_t ii) {
     } else {
         //regular fade
         if (section[ii].mode == LOW_CYCLE_STARTS_AT || section[ii].mode == (LOW_CYCLE_STARTS_AT + 1) || section[ii].mode == (LOW_CYCLE_STARTS_AT + 2) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 3)) { // rgb smooth, sudden, combined
-            masterFadeDecrement(ii, tempSpeed);
-            //fadeDecrement(ii, tempSpeed, NULL);
+            //masterFadeDecrement(ii, tempSpeed);
+            fadeDecrement(ii, tempSpeed);
 
         } else if (section[ii].mode == HIGH_CYCLE_STARTS_AT || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 1) || section[ii].mode == (HIGH_CYCLE_STARTS_AT + 2)) { // r, g, b
-            uint8_t color = section[ii].mode-SINGLE_COLOR_MODE_OFFSET;
+            uint8_t color = section[ii].mode-HIGH_CYCLE_STARTS_AT;
             fadeDecrement(ii, tempSpeed, color);
         }
     }

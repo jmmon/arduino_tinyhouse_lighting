@@ -22,6 +22,11 @@ void setup() {
 
 void loop() {
     currentTime = millis();
+    //testing
+    for (uint8_t i = 0; i < 12; i++) {
+      //TESTING_SIZEOF_UINT16_T[i] += 20; 
+      TESTING_SIZEOF_FLOAT[i] += 0.005;
+    }
 
     for (uint8_t i = 0; i < SECTION_COUNT; i++) {
         if (section[i].colorProgress) {
@@ -55,7 +60,11 @@ void loop() {
                 } else if ((btnStatus >= (BTN_RESIST[b] - BTN_RESIST_TOLERANCE)) && (btnStatus <= (BTN_RESIST[b] + BTN_RESIST_TOLERANCE))) { // else btnStatus > 255: register press and/or do "held button" actions
 
                     if (DEBUG) {
-                        DEBUG_heldActions(i, b, btnStatus);
+                        Serial.print(F(" Section:")); Serial.print(i);
+                        Serial.print(F(" Pin:")); Serial.print(section[i].PIN);
+                        Serial.print(F(" BTNread:")); Serial.print(btnStatus);
+                        Serial.print(F(" | Fade ")); Serial.print((b == 0) ? F("Down") : F("Up"));
+                        Serial.print(F(": ")); Serial.print(section[i]._btn[b]->pressCt); Serial.println(F(" presses"));
                     }
                     if (section[i]._btn[b]->timePressed == 0) {
                         // "register" a press of a button

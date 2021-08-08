@@ -312,5 +312,18 @@ TODO:
 
 
 TODO:
-    Make section a class instead of struct!
-    make button a class instead of struct
+    Make section a class instead of struct! 
+        -- Cancel this, seems to lag a bunch. Maybe needs optimizing if moving to class?
+
+    make button a class instead of struct 
+        -- this would still be nice, class with two methods for registerPress and registerRelease
+
+
+
+color struct?
+    array of 4 colors for each section: RGBW:0123
+    Each color has:
+        level - current brightness level        -- these are currently floats, would be cool to use ints instead
+        lastLevel
+        nextLevel - for colorshifting modes
+        isOn - bool (is this even necessary? just check against level?)
