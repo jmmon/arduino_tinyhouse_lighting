@@ -24,15 +24,15 @@
 //        void registerPress(uint32_t t) { // takes the currentTime
 //            pressCt++;  // add a press
 //            timePressed = t; // save the time
-//            // section[i]._btn[b]->pressCt ++;
-//            // section[i]._btn[b]->timePressed = currentTime;
+//            // section[i].btn[b].pressCt ++;
+//            // section[i].btn[b].timePressed = currentTime;
 //        }
 //
 //        void registerRelease(uint32_t t) { // takes the currentTime
 //            timePressed = 0; // reset
 //            timeReleased = t; // save the time
-//            // section[i]._btn[b]->timePressed = 0;
-//            // section[i]._btn[b]->timeReleased = currentTime;
+//            // section[i].btn[b].timePressed = 0;
+//            // section[i].btn[b].timeReleased = currentTime;
 //        }
 //
 //};
@@ -77,22 +77,22 @@
 //        uint8_t DMX_OUT;
 //        float BRIGHTNESS_FACTOR;
 //
-//        bool isOn;
+//        bool RGBWM[4]->isOn;
 //        bool colorProgress;
 //        bool extendedFade;
 //
-//        float masterLevel;
+//        float RGBWM[4]->lvl;
 //        float lastMasterLevel;
 //        uint8_t mode;
 //
 //        uint32_t colorStartTime;
-//        uint16_t colorDelayInt;
-//        float colorDelayCtr;
+//        uint16_t colorProgDelay;
+//        float colorProgSuddenDelayCtr;
 //        uint8_t colorState;
 //
-//        bool RGBWon[4];
-//        float RGBW[4];
-//        float lastRGBW[4];
+//        bool RGBWM[4]->isOn;
+//        float RGBWM[4]->lvl;
+//        float RGBWM[4]->lastLvl;
 //        float nextRGB[3];
 //
 //    public:
@@ -116,17 +116,17 @@
 //                uint8_t brightnessValue = 0; // index for brightness lookup table
 //
 //                for (uint8_t color = 0; color < 4; color++) {
-//                    if (RGBWon[color]) {
+//                    if (RGBWM[color]->isOn) {
 //
 //                        //brightnessValue = lookupTable(i, color);
 //                        
-//                        uint8_t height = (uint16_t(RGBW[color] * masterLevel * TABLE_SIZE) / HEIGHT);
-//                        uint8_t width = (uint16_t(RGBW[color] * masterLevel * TABLE_SIZE) % WIDTH);
+//                        uint8_t height = (uint16_t(RGBWM[color]->lvl * RGBWM[4]->lvl * TABLE_SIZE) / HEIGHT);
+//                        uint8_t width = (uint16_t(RGBWM[color]->lvl * RGBWM[4]->lvl * TABLE_SIZE) % WIDTH);
 //
 //                        // look up brighness from table and saves as uint8_t brightness ( sizeof(brightness) resolves to 1 [byte of data])
 //                        memcpy_P(&brightnessValue, &(DIMMER_LOOKUP_TABLE[height][width]), sizeof(brightnessValue)); 
 //
-//                        if ((RGBW[color] > 0) && (masterLevel > 0) && (brightnessValue == 0)) 
+//                        if ((RGBWM[color]->lvl > 0) && (RGBWM[4]->lvl > 0) && (brightnessValue == 0)) 
 //                            brightnessValue = 1;
 //                        
 //                    } else {
@@ -135,19 +135,19 @@
 //                    }
 //
 //                    DmxSimple.write((DMX_OUT * 8) - 8 + (color * 2 + 1), brightnessValue);
-//                    lastRGBW[color] = RGBW[color];
+//                    RGBWM[color]->lastLvl = RGBWM[color]->lvl;
 //                }
 //            }
 //                
-//            if ( (RGBW[0] <= 0) && (RGBW[1] <= 0) && (RGBW[2] <= 0) && (RGBW[3] <= 0) ) {
+//            if ( (RGBWM[0]->lvl <= 0) && (RGBWM[1]->lvl <= 0) && (RGBWM[2]->lvl <= 0) && (RGBWM[3]->lvl <= 0) ) {
 //                //switch to mode 0?
 //
-//                isOn = false;
-//                masterLevel = 0;
+//                RGBWM[4]->isOn = false;
+//                RGBWM[4]->lvl = 0;
 //
 //                for (uint8_t color = 0; color < 4; color++) {  //clear rgbw
-//                    RGBW[color] = 0;
-//                    RGBWon[color] = false;
+//                    RGBWM[color]->lvl = 0;
+//                    RGBWM[color]->isOn = false;
 //                }
 //
 //                if (DEBUG) {

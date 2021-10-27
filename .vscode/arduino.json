@@ -2,10 +2,6 @@
     "board": "arduino:avr:nano",
     "configuration": "cpu=atmega328old",
     "sketch": "Light_4.1.1_two_button.ino",
-<<<<<<< HEAD
-    "port": "COM6",
-=======
     "port": "COM3",
->>>>>>> ext-fading-not-working-well
     "programmer": "ArduinoISP"
 }

@@ -199,14 +199,14 @@ Master level - controls all light  (set to 1 by default so basically is ignored)
         B level
 
 So:
-    masterLevel
+    RGBWM[4]->lvl
     RGBL[4] => r, g, b, colorLevel
     W => white
 
 Or:
-    masterLevel
+    RGBWM[4]->lvl
     colorLevel
-    RGBW[4]
+    RGBWM[4]->lvl
 
 
 Add mode 0 for off? (use turn off light section function)
@@ -257,7 +257,7 @@ Revised:
 
                         normalize:
                             [highest, middle, low] = getHighest(r, g, b)
-                            masterLevel = highest
+                            RGBWM[4]->lvl = highest
                             low = low / highest     // if low was 0.01 and high was 0.05, low == 1/5 == 0.2
                             middle = middle / highest // if middle was 0.02, middle == 2/5 == 0.4
                             highest = 1         // highest now set to max
@@ -271,7 +271,7 @@ Revised:
 
 *************************************************************************************
 
-Modes using masterLevel as main fade ctrl:      ALL!
+Modes using RGBWM[4]->lvl as main fade ctrl:      ALL!
 
 White as extension:             color || RGB (individuals) as extension:
     modes: 1,2,4-7              mode: 0
@@ -280,50 +280,45 @@ Mode without extension:     3
 
 
 
+Make section a class instead of struct! 
+-   attach methods to section? Such as:
+    fade up (mode)
+    -- Cancel this, seems to lag a bunch. Maybe needs optimizing if moving to class?
 
+make button a class instead of struct 
+    -- this would still be nice, class with two methods for registerPress and registerRelease
 
-
-
-TODO: 1
-    when in nightlight mode, fading to off should switch out of nightlight mode 
-    ?? or not? stay in "red" mode?
-
-    mode 7: 
-    Then all the previous levels combined? haha
-
-    Same with white: after hitting max brightness, fading up again turns on rgb as a white, then fading down will fade rgb then w
-    colorProgress: after hitting max brightness, next time it fades it adds white? then fading down first fades down white then fades color.
-
-    double press and hold on white fades ALL sets with white? or all?
-    (Double press and hold on color fades ALL sets with color) or all?
-        - Don't adjust the original white level - instead use a second variable so they can stay in sync with each other in terms of starting difference in brightness level
-
-
-
-TODO:
-    Triple tap + hold == fade all up/down? 
-        OR Double???????
-
-    That means double tap + hold == speedAdj for progressColor
-
-TODO:
-    attach methods to section? Such as:
-        fade up (mode)
-
-
-TODO:
-    Make section a class instead of struct! 
-        -- Cancel this, seems to lag a bunch. Maybe needs optimizing if moving to class?
-
-    make button a class instead of struct 
-        -- this would still be nice, class with two methods for registerPress and registerRelease
-
-
-
-color struct?
+color struct
     array of 4 colors for each section: RGBW:0123
     Each color has:
         level - current brightness level        -- these are currently floats, would be cool to use ints instead
         lastLevel
         nextLevel - for colorshifting modes
-        isOn - bool (is this even necessary? just check against level?)
+        RGBWM[4]->isOn - bool (is this even necessary? just check against level?)
+
+
+15342 bytes (49%) of program storage space. Maximum is 30720 bytes.
+Global variables use 1250 bytes (61%) of dynamic memory, leaving 798 
+
+
+
+
+
+
+
+
+TODO:  
+    Triple tap + hold == fade all up/down? 
+        OR Double???????
+
+    That means double tap + hold == speedAdj for progressColor
+
+TODO: 1
+    double press and hold on white fades ALL sets with white? or all?
+    (Double press and hold on color fades ALL sets with color) or all?
+
+        - Save the original level as a new variable, then use the lvl for this ability to scale the lighting
+        - Once a different type of action is used, reset the variable to wipe the memory
+
+
+
